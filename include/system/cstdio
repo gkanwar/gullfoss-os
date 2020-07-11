@@ -1,0 +1,13 @@
+#ifndef STDIO_H
+#define STDIO_H
+
+#include <stdarg.h>
+#include <stddef.h>
+
+namespace std {
+
+size_t vfprintf(void putc(char), const char* fmt, va_list& args);
+
+}
+
+#endif
