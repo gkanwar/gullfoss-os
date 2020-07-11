@@ -16,22 +16,24 @@ InterruptManager::InterruptManager() {
 InterruptManager& InterruptManager::get() { return *inst; }
 
 static inline InterruptGate make_interrupt_gate(void f(interrupt::int_frame*)) {
-  uint32_t offset = (uint32_t)f;
+  uint64_t offset = (uint64_t)f;
   const uint8_t type = 0b1110;
   const uint8_t p = 1;
   const uint8_t dpl = 0;
   return {
-    .offset_low = (uint16_t) (offset & 0xffff),
+    .offset_1 = (uint16_t) (offset & 0xffff),
     .segment_selector = 0x8,
     .ist = 0,
     .flags = (p << 7) | (dpl << 5) | type,
-    .offset_high = (uint16_t) ((offset >> 16) & 0xffff)
+    .offset_2 = (uint16_t) ((offset >> 16) & 0xffff),
+    .offset_3 = (uint32_t) ((offset >> 32) & 0xffffffff),
+    .zero = 0
   };
 }
 
 struct IDTRegister {
   uint16_t limit;
-  uint32_t addr;
+  uint64_t addr;
 } __attribute__((packed));
 
 void InterruptManager::load_idt() {
@@ -121,6 +123,9 @@ void InterruptManager::reprogram_pics() {
   io::out8(pic2_data, icw4_8086_mode);
   io::io_wait();
 
+
+  // TODO: more principled enable/disable masking
+  mask1 &= ~(1 << 1); // enable keyboard interrupts
   io::out8(pic1_data, mask1);
   io::out8(pic2_data, mask2);
 }
@@ -129,7 +134,7 @@ void InterruptManager::init_interrupts() {
   reprogram_pics(); // TODO: switch over to APIC?
   IDTRegister reg = {
     .limit = sizeof(interrupt_desc_table)-1,
-    .addr = (uint32_t)interrupt_desc_table
+    .addr = (uint64_t)interrupt_desc_table
   };
   asm volatile ("lidt %0" :: "m"(reg));
   asm volatile ("sti"::);

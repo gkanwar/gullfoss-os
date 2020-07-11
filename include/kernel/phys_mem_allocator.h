@@ -2,13 +2,14 @@
 #define PHYS_MEM_ALLOCATOR_H
 
 #include <stdint.h>
+#include "bootboot.h"
 #include "kernel.h"
 
 class PhysMemAllocator {
  public:
   PhysMemAllocator();
   static PhysMemAllocator& get();
-  void init_mmap(uint32_t mmap_length, uint32_t mmap_addr);
+  void init_mmap(const MMapEnt* mmap, unsigned count);
   void* alloc1();
   void* alloc8();
   void* alloc32();

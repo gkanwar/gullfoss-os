@@ -4,11 +4,13 @@
 #include <stdint.h>
 
 struct InterruptGate {
-  uint16_t offset_low;
+  uint16_t offset_1;
   uint16_t segment_selector;
   uint8_t ist;
   uint8_t flags;
-  uint16_t offset_high;
+  uint16_t offset_2;
+  uint32_t offset_3;
+  uint32_t zero;
 } __attribute__((packed));
 
 class InterruptManager {

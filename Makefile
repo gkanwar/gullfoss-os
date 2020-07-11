@@ -1,17 +1,16 @@
 BIN := bin
 SRC := src
 INCLUDE := include
-KERNEL_OUT = $(BIN)/$(TARGET)/kernel.bin
 PROJ_NAME := gullfoss
 
-CROSSBIN := $(HOME)/opt/cross/bin
-AS := $(CROSSBIN)/i686-elf-as
-CC := $(CROSSBIN)/i686-elf-gcc
-CXX := $(CROSSBIN)/i686-elf-g++
-LD := $(CROSSBIN)/i686-elf-ld
+CROSSBIN := $(HOME)/opt/cross64/bin
+AS := $(CROSSBIN)/x86_64-elf-as
+CC := $(CROSSBIN)/x86_64-elf-gcc
+CXX := $(CROSSBIN)/x86_64-elf-g++
+LD := $(CROSSBIN)/x86_64-elf-ld
 
 .SUFFIXES: # remove default rules
-.PHONY: debug release kernel clean kernel-binary grub-image
+.PHONY: debug release bootboot-image initrd kernel clean kernel-binary
 
 
 ### Recursive/trivial make targets
@@ -20,28 +19,21 @@ ifndef TARGET
 debug: export TARGET := debug
 release: export TARGET := release
 debug release:
-	@$(MAKE)
+	@$(MAKE) bootboot-image
 clean:
 	rm -rf $(BIN)
-
-grub-image: TARGET := release
-grub-image: release grub.cfg
-	mkdir -p $(BIN)/iso/boot/grub
-	cp $(KERNEL_OUT) $(BIN)/iso/boot/
-	cp grub.cfg $(BIN)/iso/boot/grub/
-	grub-mkrescue -o $(BIN)/$(TARGET)/$(PROJ_NAME).iso $(BIN)/iso
-
 
 ### Main make targets (TARGET is defined)
 else
 
 # make sure output dirs exist
 TBIN := $(BIN)/$(TARGET)
+$(shell mkdir -p $(TBIN)/initrd/boot)
 $(shell mkdir -p $(TBIN)/kernel)
 $(shell mkdir -p $(TBIN)/system)
 
-CFLAGS := -ffreestanding -Wall -Wextra -Werror
-CXXFLAGS := -std=c++17 -ffreestanding -fno-rtti -fno-exceptions -Wall -Wextra -Werror
+CFLAGS := -ffreestanding -mcmodel=kernel -mno-red-zone -Wall -Wextra -Werror
+CXXFLAGS := -std=c++17 -ffreestanding -fno-rtti -fno-exceptions -mcmodel=kernel -mno-red-zone -Wall -Wextra -Werror
 ASFLAGS := -x assembler-with-cpp
 RELEASE_FLAGS := -DNDEBUG -O3
 DEBUG_FLAGS := -DDEBUG -O2 -g
@@ -57,7 +49,6 @@ endif
 
 
 KERNEL_SRCS = \
-	bootstrap.s \
 	debug_serial.cpp \
 	heap_allocator.cpp \
 	interrupt_impl.cpp \
@@ -67,12 +58,13 @@ KERNEL_SRCS = \
 	memory.cpp \
 	panic.cpp \
 	phys_mem_allocator.cpp \
-	pre_kernel.cpp \
 	shell.cpp \
-	vga.cpp \
-	virt_mem_allocator.cpp
+	tar.cpp \
+	vga.cpp #\
+	# virt_mem_allocator.cpp
 SYSTEM_SRCS = \
-	stdlib.cpp
+	stdlib.cpp \
+	string.cpp
 
 # identify all obj and dep files
 KERNEL_OBJS := $(addprefix $(TBIN)/kernel/,$(patsubst %.cpp,%.o,$(KERNEL_SRCS:.s=.o)))
@@ -111,10 +103,33 @@ $(TBIN)/system/%.o: $(SRC)/system/%.cpp
 # special rules
 $(TBIN)/kernel/interrupt_impl.o: CXXFLAGS := $(CXXFLAGS) -mgeneral-regs-only
 
+INITRD_FILES := \
+	boot/sys/config \
+	boot/waterfall.bmp
+INITRD_OUT_FILES := $(addprefix $(TBIN)/initrd/,$(INITRD_FILES))
+
+# copy initrd files
+$(TBIN)/initrd/%: $(SRC)/%
+	mkdir -p `dirname $@`
+	cp $< $@
+
 # build the kernel binary
+KERNEL_OUT := $(BIN)/$(TARGET)/kernel.bin
 $(KERNEL_OUT): $(OBJS) kernel.ld
 	$(CXX) -T kernel.ld -o $@ $(CXXFLAGS) $(LINK_LIST)
 kernel: $(KERNEL_OUT)
+
+initrd: $(KERNEL_OUT) $(INITRD_OUT_FILES)
+	cp $(KERNEL_OUT) $(TBIN)/initrd/boot/
+
+# configure bootboot
+$(TBIN)/bootboot.json: $(SRC)/boot/bootboot.template.json
+	export TARGET
+	envsubst <$< >$@
+
+# default target
+bootboot-image: initrd $(TBIN)/bootboot.json
+	mkbootimg $(TBIN)/bootboot.json $(BIN)/$(TARGET)/$(PROJ_NAME).iso
 
 
 -include $(KERNEL_DEPS) $(SYSTEM_DEPS)

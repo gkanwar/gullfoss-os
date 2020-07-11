@@ -31,8 +31,8 @@ void HeapAllocator::init_heap_pages(
     phys_heap_chunks[i] = physMemAlloc.alloc32();
     assert(phys_heap_chunks[i], "heap chunk alloc failed");
     for (unsigned j = 0; j < CHUNK_PAGES; ++j) {
-      void* heap_page = (void*)((uint32_t)phys_heap_chunks[i] + j*PAGE_SIZE);
-      void* virt_page = (void*)((uint32_t)heap + (CHUNK_PAGES*i+j)*PAGE_SIZE);
+      void* heap_page = (void*)((uint8_t*)phys_heap_chunks[i] + j*PAGE_SIZE);
+      void* virt_page = (void*)((uint8_t*)heap + (CHUNK_PAGES*i+j)*PAGE_SIZE);
       [[maybe_unused]] void* res = virtMemAlloc.map_page(virt_page, heap_page);
       assert(res, "mapping heap page failed");
       // save addresses of suballocators
@@ -54,10 +54,10 @@ void HeapAllocator::init_heap_pages(
   heap->next = nullptr;
   heap->size = (CHUNK_PAGES-3) * PAGE_SIZE;
   heap->allocated = false;
-  debug::serial_printf("heap reserved at v %08x\n", (uint32_t)heap);
-  debug::serial_printf("slab8 reserved at v %08x\n", (uint32_t)slab8);
-  debug::serial_printf("slab16 reserved at v %08x\n", (uint32_t)slab16);
-  debug::serial_printf("slab32 reserved at v %08x\n", (uint32_t)slab32);
+  debug::serial_printf("heap reserved at v %p\n", heap);
+  debug::serial_printf("slab8 reserved at v %p\n", slab8);
+  debug::serial_printf("slab16 reserved at v %p\n", slab16);
+  debug::serial_printf("slab32 reserved at v %p\n", slab32);
 }
 
 void* HeapAllocator::slab8_malloc() {
@@ -117,7 +117,7 @@ void* HeapAllocator::block_malloc(size_t size) {
       leftover -= leftover % HEAP_BLOCK_ALIGN;
       if (leftover > 0) {
         node->size -= leftover;
-        HeapBlock* next = (HeapBlock*)((uint32_t)node + node->size);
+        HeapBlock* next = (HeapBlock*)((uint8_t*)node + node->size);
         next->next = node->next;
         next->size = leftover;
         next->allocated = false;
@@ -130,6 +130,8 @@ void* HeapAllocator::block_malloc(size_t size) {
 }
 
 void* HeapAllocator::malloc(size_t size) {
+  assert(heap, "HeapAllocator not initialized");
+  debug::serial_printf("malloc heap ptr %p\n", heap);
   if (size > HEAP_PAGES * PAGE_SIZE) {
     return nullptr;
   }

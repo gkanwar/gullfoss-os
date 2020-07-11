@@ -1,0 +1,10 @@
+#ifndef STDLIB_H
+#define STDLIB_H
+
+namespace std {
+
+long int strtol(const char* str, const char** endptr, int base);
+
+}
+
+#endif

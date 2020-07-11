@@ -5,7 +5,9 @@
 
 namespace std {
 size_t strlen(const char*);
-void * memset(void *ptr, int value, size_t num);
+int strcmp(const char*, const char*);
+void* memset(void* ptr, int value, size_t num);
+void* memcpy(void* dest, const void* src, size_t num);
 }
 
 #endif

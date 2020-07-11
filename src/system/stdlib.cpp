@@ -8,20 +8,70 @@
 
 namespace std {
 
-size_t strlen(const char* str) 
-{
-  size_t len = 0;
-  while (str[len]) len++;
-  return len;
+// Not POSIX compliant
+static bool isspace(char c) {
+  return c == ' ' || c == '\n' || c == '\r' || c == '\t';
+}
+// Convert to value in base, or -1 indicating invalid digit
+static long int convert_digit(char c, int base) {
+  if (c < '0') return -1;
+  if (c <= '9') { // check 0-9 digits
+    if (c < ('0' + base)) {
+      return c - '0';
+    }
+    return -1;
+  }
+  else if (c < 'A') return -1;
+  else if (c <= 'Z') { // check A-Z digits
+    if (c < ('A' + base-10)) {
+      return c - 'A' + 10;
+    }
+    return -1;
+  }
+  else if (c < 'a') return -1;
+  else if (c <= 'z') { // check a-z digits
+    if (c < ('a' + base-10)) {
+      return c - 'a' + 10;
+    }
+    return -1;
+  }
+  else return -1;
 }
 
-void* memset(void* ptr, int value, size_t num) {
-  uint8_t byte_value = (uint8_t) value;
-  uint8_t* byte_ptr = (uint8_t*)ptr;
-  for (; num > 0; num--, byte_ptr++) {
-    *byte_ptr = byte_value;
+long int strtol(const char* str, const char** endptr, int base) {
+  long int sign = 1;
+  while (isspace(*str)) { ++str; }
+  if (*str == '+') { ++str; }
+  if (*str == '-') { sign = -1; ++str; }
+  // special case: strip optional 0x or 0X if base is 16
+  if (base == 16 && *str == '0' && (*(str+1) == 'x' || *(str+1) == 'X')) {
+    str += 2;
   }
-  return ptr;
+  // special case: detect base if zero
+  if (base == 0) {
+    if (*str != '0') {
+      base = 10;
+    }
+    else if (*(str+1) == 'x' || *(str+1) == 'X') {
+      base = 16;
+      str += 2;
+    }
+    else {
+      base = 8;
+      str += 1;
+    }
+  }
+  long int value = 0;
+  char next = *str;
+  for (long int digit = convert_digit(next, base); digit >= 0;
+       ++str, next = *str, digit = convert_digit(next, base)) {
+    value *= base;
+    value += digit;
+  }
+  if (endptr) {
+    *endptr = str;
+  }
+  return sign * value;
 }
 
 struct format_spec {
@@ -30,14 +80,20 @@ struct format_spec {
     ForceSign = 1 << 1,
     ForceSpace = 1 << 2,
     ForcePoint = 1 << 3,
-    ZeroPad = 1 << 4
+    ZeroPad = 1 << 4,
   };
   uint8_t flags;
   int16_t min_width; 
   int16_t precision;
-  // TODO: length modifier
+  enum length_mod {
+    None,
+    Long,
+    LongLong,
+  };
+  length_mod length_modifier;
   char specifier;
-  format_spec() : flags(0), min_width(-1), precision(-1), specifier('\0') {}
+  format_spec() : flags(0), min_width(-1), precision(-1),
+                  length_modifier(length_mod::None), specifier('\0') {}
 };
 
 static format_spec parse_format_spec(const char** pfmt) {
@@ -109,7 +165,17 @@ static format_spec parse_format_spec(const char** pfmt) {
       }
     }
   }
-  // TODO: length modifier
+  // TODO: other length modifiers
+  if (*fmt == 'l') {
+    if (*(fmt+1) == 'l') {
+      fmt += 2;
+      spec.length_modifier = format_spec::length_mod::LongLong;
+    }
+    else {
+      fmt++;
+      spec.length_modifier = format_spec::length_mod::Long;
+    }
+  }
   switch (*fmt) {
     case 'd':
     case 'i':
@@ -176,7 +242,11 @@ static void format_unsigned(Writer putc, const format_spec& spec, unsigned arg) 
 }
 
 template<typename Writer>
-static void format_int(Writer putc, const format_spec& spec, int arg) {
+static void format_int(Writer putc, const format_spec& spec, int32_t arg) {
+  format_int(putc, spec, (int64_t)arg);
+}
+template<typename Writer>
+static void format_int(Writer putc, const format_spec& spec, int64_t arg) {
   char buf[32];
   char extra = 0;
   if (arg == 0) {
@@ -198,7 +268,11 @@ static void format_int(Writer putc, const format_spec& spec, int arg) {
 }
 
 template<typename Writer>
-static void format_hex(Writer putc, const format_spec& spec, unsigned arg) {
+static void format_hex(Writer putc, const format_spec& spec, uint32_t arg) {
+  format_hex(putc, spec, (uint64_t)arg);
+}
+template<typename Writer>
+static void format_hex(Writer putc, const format_spec& spec, uint64_t arg) {
   char buf[32];
   char extra = 0;
   if (arg == 0) {
@@ -215,6 +289,13 @@ static void format_hex(Writer putc, const format_spec& spec, unsigned arg) {
 }
 
 template<typename Writer>
+static void format_string(Writer putc, const format_spec&, const char* str) {
+  for (char c = *str; c != '\0'; ++str, c = *str) {
+    putc(c);
+  }
+}
+
+template<typename Writer>
 static void format_arg(Writer putc, const char** pfmt, va_list& args) {
   const char* fmt = *pfmt;
   const char* fmt_spec = fmt+1;
@@ -223,13 +304,52 @@ static void format_arg(Writer putc, const char** pfmt, va_list& args) {
   switch (spec.specifier) {
     case 'd':
     case 'i':
-      format_int(putc, spec, va_arg(args, int));
+      if (spec.length_modifier == format_spec::length_mod::None ||
+          spec.length_modifier == format_spec::length_mod::Long) {
+        format_int(putc, spec, va_arg(args, int32_t));
+      }
+      else if (spec.length_modifier == format_spec::length_mod::LongLong) {
+        format_int(putc, spec, va_arg(args, int64_t));
+      }
+      else { // TODO assert not reached
+      }        
       break;
     case 'u':
-      format_unsigned(putc, spec, va_arg(args, unsigned));
+      if (spec.length_modifier == format_spec::length_mod::None ||
+          spec.length_modifier == format_spec::length_mod::Long) {
+        format_unsigned(putc, spec, va_arg(args, uint32_t));
+      }
+      else if (spec.length_modifier == format_spec::length_mod::LongLong) {
+        format_unsigned(putc, spec, va_arg(args, uint64_t));
+      }
+      else { // TODO assert not reached
+      }
       break;
     case 'x':
-      format_hex(putc, spec, va_arg(args, unsigned));
+      if (spec.length_modifier == format_spec::length_mod::None ||
+          spec.length_modifier == format_spec::length_mod::Long) {
+        format_hex(putc, spec, va_arg(args, uint32_t));
+      }
+      else if (spec.length_modifier == format_spec::length_mod::LongLong) {
+        format_hex(putc, spec, va_arg(args, uint64_t));
+      }
+      else { // TODO assert not reached
+      }
+      break;
+    case 'p':
+      spec.flags |= format_spec::flag::ZeroPad;
+      spec.min_width = sizeof(void*)*2; // 2 hex chars per byte
+      #ifdef __LP64__
+      format_hex(putc, spec, (uint64_t)va_arg(args, void*));
+      #else
+      format_hex(putc, spec, (uint32_t)va_arg(args, void*));
+      #endif
+      break;
+    case 's':
+      format_string(putc, spec, va_arg(args, const char*));
+      break;
+    case 'c':
+      putc((char)va_arg(args, int)); // char promoted to int in va_arg
       break;
     default: // unknown format spec, just print '%' and move to next char
       putc(*fmt);
