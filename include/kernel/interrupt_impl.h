@@ -3,6 +3,12 @@
 
 namespace interrupt {
 
+#ifdef __x86_64__
+typedef unsigned long long int uword_t;
+#else
+typedef unsigned int uword_t;
+#endif
+
 struct int_frame;
 
 // panic if called (we expect no interrupts on these vectors)
@@ -18,13 +24,13 @@ __attribute__((interrupt)) void handle_overflow(int_frame*);
 __attribute__((interrupt)) void handle_bound(int_frame*);
 __attribute__((interrupt)) void handle_undef_opcode(int_frame*);
 __attribute__((interrupt)) void handle_fpu_unavail(int_frame*);
-__attribute__((interrupt)) void handle_double_fault(int_frame*);
+__attribute__((interrupt)) void handle_double_fault(int_frame*, uword_t);
 __attribute__((interrupt)) void handle_fpu_overrun(int_frame*);
 __attribute__((interrupt)) void handle_invalid_tss(int_frame*);
-__attribute__((interrupt)) void handle_segfault(int_frame*);
-__attribute__((interrupt)) void handle_stack_segfault(int_frame*);
-__attribute__((interrupt)) void handle_gp_fault(int_frame*);
-__attribute__((interrupt)) void handle_page_fault(int_frame*);
+__attribute__((interrupt)) void handle_segfault(int_frame*, uword_t);
+__attribute__((interrupt)) void handle_stack_segfault(int_frame*, uword_t);
+__attribute__((interrupt)) void handle_gp_fault(int_frame*, uword_t);
+__attribute__((interrupt)) void handle_page_fault(int_frame*, uword_t);
 __attribute__((interrupt)) void handle_fpu_fault(int_frame*);
 __attribute__((interrupt)) void handle_align_check(int_frame*);
 __attribute__((interrupt)) void handle_machine_check(int_frame*);

@@ -15,7 +15,7 @@ InterruptManager::InterruptManager() {
 }
 InterruptManager& InterruptManager::get() { return *inst; }
 
-static inline InterruptGate make_interrupt_gate(void f(interrupt::int_frame*)) {
+static inline InterruptGate make_interrupt_gate(uint64_t f) {
   uint64_t offset = (uint64_t)f;
   const uint8_t type = 0b1110;
   const uint8_t p = 1;
@@ -29,6 +29,12 @@ static inline InterruptGate make_interrupt_gate(void f(interrupt::int_frame*)) {
     .offset_3 = (uint32_t) ((offset >> 32) & 0xffffffff),
     .zero = 0
   };
+}
+static inline InterruptGate make_interrupt_gate(void f(interrupt::int_frame*)) {
+  return make_interrupt_gate((uint64_t)f);
+}
+static inline InterruptGate make_interrupt_gate(void f(interrupt::int_frame*, interrupt::uword_t)) {
+  return make_interrupt_gate((uint64_t)f);
 }
 
 struct IDTRegister {
