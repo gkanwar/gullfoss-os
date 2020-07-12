@@ -11,12 +11,9 @@
 #include "io.h"
 #include "keyboard_state.h"
 #include "task_manager.h"
+#include "util.h"
 
 namespace interrupt {
-
-struct int_frame {
-
-};
 
 // panic if called (we expect no interrupts on these vectors)
 __attribute__((interrupt))
@@ -40,6 +37,7 @@ __attribute__((interrupt)) void handle_fpu_unavail(int_frame*) {}
 __attribute__((interrupt))
 void handle_double_fault(int_frame*, uword_t err_code) {
   debug::serial_printf("DOUBLE FAULT\n", err_code);
+  PANIC_NOT_IMPLEMENTED("handle_double_fault");
 }
 
 __attribute__((interrupt)) void handle_fpu_overrun(int_frame*) {}
@@ -48,21 +46,25 @@ __attribute__((interrupt)) void handle_invalid_tss(int_frame*) {}
 __attribute__((interrupt))
 void handle_segfault(int_frame*, uword_t err_code) {
   debug::serial_printf("EXCEPTION: seg fault %08x\n", err_code);
+  PANIC_NOT_IMPLEMENTED("handle_segafult");
 }
 
 __attribute__((interrupt))
 void handle_stack_segfault(int_frame*, uword_t err_code) {
   debug::serial_printf("EXCEPTION: stack seg fault %08x\n", err_code);
+  PANIC_NOT_IMPLEMENTED("handle_stack_segfault");
 }
 
 __attribute__((interrupt))
 void handle_gp_fault(int_frame*, uword_t err_code) {
   debug::serial_printf("EXCEPTION: gp fault %08x\n", err_code);
+  PANIC_NOT_IMPLEMENTED("handle_gp_fault");
 }
 
 __attribute__((interrupt))
 void handle_page_fault(int_frame*, uword_t err_code) {
   debug::serial_printf("EXCEPTION: page fault %08x\n", err_code);
+  PANIC_NOT_IMPLEMENTED("handle_page_fault");
 }
 
 __attribute__((interrupt)) void handle_fpu_fault(int_frame*) {}
@@ -74,10 +76,17 @@ __attribute__((interrupt)) void handle_cp_fault(int_frame*) {}
 
 
 // IRQs from PICs
-__attribute__((interrupt)) void handle_timer(int_frame*) {
-  debug::serial_printf("INTERRUPT: timer\n");
+__attribute__((interrupt)) void handle_timer(int_frame* frame) {
+  // debug::serial_printf("INTERRUPT: timer\n");
+  // debug::serial_printf("\tRIP = %p\n", (void*)frame->xip);
+  // debug::serial_printf("\tCS = %02llx\n", frame->cs);
+  // debug::serial_printf("\tRFLAGS = %016llx\n", frame->xflags);
+  // debug::serial_printf("\tRSP = %p\n", (void*)frame->xsp);
+  // debug::serial_printf("\tSS = %02llx\n", frame->ss);
+  UNUSED_PARAM(frame);
+  InterruptManager::pic_send_eoi(0x0); // must send BEFORE yielding
   TaskManager::get().yield();
-  InterruptManager::pic_send_eoi(0x0);
+  // debug::serial_printf("yield done\n");
 }
 
 __attribute__((interrupt)) void handle_keyboard(int_frame*) {

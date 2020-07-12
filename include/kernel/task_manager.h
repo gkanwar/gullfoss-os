@@ -14,8 +14,7 @@ class TaskManager {
   TaskManager();
   static TaskManager& get();
   void yield();
-  void exit();
-  // TODO: fork()-like primitive
+  void start(void entry(void));
  private:
   TaskNode* cur_task{nullptr};
 };

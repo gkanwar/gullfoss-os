@@ -22,6 +22,7 @@ union alignas(HEAP_BLOCK_ALIGN) HeapAllocator::HeapBlock {
 void HeapAllocator::initialize(
     PhysMemAllocator& physMemAlloc, VirtMemAllocator& virtMemAlloc) {
   // grab a 2MiB contiguous region of kernel virtual memory
+  assert(HEAP_PAGES == NUM_PT_ENTRIES, "heap must be one block");
   heap = (HeapBlock*)virtMemAlloc.find_free_block();
 
   assert(HEAP_PAGES % 32 == 0, "heap must be allocated in 32-page blocks");

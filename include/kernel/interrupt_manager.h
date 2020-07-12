@@ -43,4 +43,14 @@ class InterruptManager {
   InterruptGate interrupt_desc_table[256];
 };
 
+class ScopedInterruptGuard {
+ public:
+  ScopedInterruptGuard() {
+    asm volatile("cli"::);
+  }
+  ~ScopedInterruptGuard() {
+    asm volatile("sti"::);
+  }
+};
+
 #endif

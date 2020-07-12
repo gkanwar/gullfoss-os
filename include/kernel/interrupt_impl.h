@@ -9,7 +9,13 @@ typedef unsigned long long int uword_t;
 typedef unsigned int uword_t;
 #endif
 
-struct int_frame;
+struct int_frame {
+  uword_t xip;
+  uword_t cs;
+  uword_t xflags;
+  uword_t xsp;
+  uword_t ss;
+};
 
 // panic if called (we expect no interrupts on these vectors)
 __attribute__((interrupt)) void assert_no_handler(int_frame*);

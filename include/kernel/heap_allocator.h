@@ -6,7 +6,7 @@
 #include "virt_mem_allocator.h"
 
 #define CHUNK_PAGES 32
-#define HEAP_PAGES 512 // 2MiB heap
+#define HEAP_PAGES NUM_PT_ENTRIES // 2MiB heap
 
 class HeapAllocator {
  public:

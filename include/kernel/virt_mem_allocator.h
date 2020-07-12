@@ -12,6 +12,8 @@
 #define PAGING_PML5 4
 #define PAGING PAGING_PML4
 
+#define NUM_PT_ENTRIES 512
+
 #include <stdint.h>
 #include "kernel.h"
 #include "phys_mem_allocator.h"

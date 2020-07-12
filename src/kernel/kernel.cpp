@@ -105,9 +105,36 @@ int kernel_early_main(const BOOTBOOT& info, pixel_t framebuffer[]) {
   debug::serial_printf("heap ptr %p\n", heapAlloc.heap);
   return 0;
 }
+
+// Our first real (kernel mode) app!
+// FORNOW: Just forward-declare these globals again, need to figure out args to
+// started tasks.
+extern "C" {
+  extern BOOTBOOT _bootboot;
+  extern uint8_t _bootboot_fb;
+}
+[[noreturn]] void shell_task() {
+  debug::serial_printf("shell_task start\n");
+  const BOOTBOOT& info = _bootboot;
+  pixel_t* framebuffer = (pixel_t*)&_bootboot_fb;
+  debug::serial_printf("BOOTBOOT info %p\n", &info);
+  debug::serial_printf("...fb_size = %llu, (%llu x %llu)\n", info.fb_size,
+                       info.fb_width, info.fb_height);
+  Tarball initrd((const void*)info.initrd_ptr, info.initrd_size);
+  const uint8_t* psf_buffer = (const uint8_t*)
+      initrd.find_file("texgyrecursor-regular.psf");
+  PSFFont font(psf_buffer);
+  USKeyMap key_map;
+  Framebuffer fb(framebuffer, info.fb_size, info.fb_height, info.fb_width, info.fb_scanline);
+  FBTerminal term(&fb, font);
+  app::Shell shell(key_map, term);
+  KeyboardState::get().set_subscriber(shell);
+  shell.main();
+  ASSERT_NOT_REACHED;
+}
   
 [[noreturn]]
-void kernel_main(const BOOTBOOT& info, pixel_t framebuffer[]) 
+void kernel_main() 
 {
   // VirtMemAllocator::get().clear_ident_map();
   // debug::serial_printf("ident map cleared\n");
@@ -156,24 +183,13 @@ void kernel_main(const BOOTBOOT& info, pixel_t framebuffer[])
   // Multitasking
   new TaskManager;
   InterruptManager::get().toggle_irq(PICMask1::PITimer, true);
-  
-  // Run our first real (kernel mode) app! For now it just takes ownership of
-  // the whole kernel :)
-  debug::serial_printf("BOOTBOOT info %p\n", &info);
-  debug::serial_printf("...fb_size = %llu, (%llu x %llu)\n", info.fb_size,
-                       info.fb_width, info.fb_height);
-  Tarball initrd((const void*)info.initrd_ptr, info.initrd_size);
-  const uint8_t* psf_buffer = (const uint8_t*)
-      initrd.find_file("texgyrecursor-regular.psf");
-  PSFFont font(psf_buffer);
-  USKeyMap key_map;
-  Framebuffer fb(framebuffer, info.fb_size, info.fb_height, info.fb_width, info.fb_scanline);
-  FBTerminal term(&fb, font);
-  app::Shell shell(key_map, term);
-  KeyboardState::get().set_subscriber(shell);
-  shell.main();
 
-  panic("kernel exited!\n");
+  // Fire Stage 2 booting (for now, just run "shell")
+  TaskManager::get().start(shell_task);
+
+  // Kernel idle loop (maybe we should nuke this task?)
+  while (true) { asm volatile("hlt"::); }
+  ASSERT_NOT_REACHED;
 }
 
 
@@ -199,6 +215,6 @@ extern "C" {
     debug::serial_printf("end global ctors\n");
     // Enter usual C++ happy land, where we can use new, etc.
     debug::serial_printf("start kernel_main\n");
-    kernel_main(_bootboot, (pixel_t*)&_bootboot_fb);
+    kernel_main();
   }
 }
