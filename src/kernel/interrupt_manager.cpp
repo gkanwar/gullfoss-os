@@ -5,6 +5,7 @@
 #include "interrupt_impl.h"
 #include "interrupt_manager.h"
 #include "io.h"
+#include "util.h"
 
 
 static InterruptManager* inst;
@@ -129,10 +130,31 @@ void InterruptManager::reprogram_pics() {
   io::out8(pic2_data, icw4_8086_mode);
   io::io_wait();
 
-
-  // TODO: more principled enable/disable masking
-  mask1 &= ~(1 << 1); // enable keyboard interrupts
+  // Start with everything masked out
+  mask1 = 0xff;
+  mask2 = 0xff;
   io::out8(pic1_data, mask1);
+  io::out8(pic2_data, mask2);
+}
+
+void InterruptManager::toggle_irq(PICMask1 mask, bool enable) {
+  uint8_t mask1 = io::in8(pic1_data);
+  if (enable) {
+    util::unset_bit(mask1, mask);
+  }
+  else {
+    util::set_bit(mask1, mask);
+  }
+  io::out8(pic1_data, mask1);
+}
+void InterruptManager::toggle_irq(PICMask2 mask, bool enable) {
+  uint8_t mask2 = io::in8(pic2_data);
+  if (enable) {
+    util::unset_bit(mask2, mask);
+  }
+  else {
+    util::set_bit(mask2, mask);
+  }
   io::out8(pic2_data, mask2);
 }
 

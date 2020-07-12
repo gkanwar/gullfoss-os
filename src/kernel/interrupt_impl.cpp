@@ -10,6 +10,7 @@
 #include "interrupt_manager.h"
 #include "io.h"
 #include "keyboard_state.h"
+#include "task_manager.h"
 
 namespace interrupt {
 
@@ -74,7 +75,8 @@ __attribute__((interrupt)) void handle_cp_fault(int_frame*) {}
 
 // IRQs from PICs
 __attribute__((interrupt)) void handle_timer(int_frame*) {
-  // TODO
+  debug::serial_printf("INTERRUPT: timer\n");
+  TaskManager::get().yield();
   InterruptManager::pic_send_eoi(0x0);
 }
 
@@ -82,7 +84,6 @@ __attribute__((interrupt)) void handle_keyboard(int_frame*) {
   const uint8_t ps2_data = 0x60;
   uint8_t c = io::in8(ps2_data);
   KeyboardState::get().handle_scan_code(c);
-  debug::serial_printf("INTERRUPT: key scan code %02x\n", c);
   InterruptManager::pic_send_eoi(0x1);
 }
 

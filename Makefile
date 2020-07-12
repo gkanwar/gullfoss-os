@@ -61,6 +61,7 @@ KERNEL_SRCS = \
 	psffont.cpp \
 	shell.cpp \
 	tar.cpp \
+	task_manager.cpp \
 	terminal.cpp \
 	virt_mem_allocator.cpp
 SYSTEM_SRCS = \

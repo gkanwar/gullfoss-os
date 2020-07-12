@@ -18,7 +18,7 @@ inline void set_bit(T& flags, U bit) {
 template<typename T, typename U>
 inline void unset_bit(T& flags, U bit) {
   unsigned ubit = static_cast<unsigned>(bit);
-  flags &= ~(1 << bit);
+  flags &= ~(1 << ubit);
 }
 
 }

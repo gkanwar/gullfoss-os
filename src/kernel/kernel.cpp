@@ -27,6 +27,7 @@
 #include "psffont.h"
 #include "shell.h"
 #include "tar.h"
+#include "task_manager.h"
 #include "terminal.h"
 #include "test.h"
 #include "util.h"
@@ -114,6 +115,7 @@ void kernel_main(const BOOTBOOT& info, pixel_t framebuffer[])
   new KeyboardState;
   new InterruptManager;
   InterruptManager::get().init_interrupts();
+  InterruptManager::get().toggle_irq(PICMask1::Keyboard, true);
   debug::serial_printf("interrupts enabled!\n");
 
   // TEST: Try to trigger div0 exception
@@ -151,6 +153,10 @@ void kernel_main(const BOOTBOOT& info, pixel_t framebuffer[])
   });
   debug::serial_printf("malloc all good\n");
 
+  // Multitasking
+  new TaskManager;
+  InterruptManager::get().toggle_irq(PICMask1::PITimer, true);
+  
   // Run our first real (kernel mode) app! For now it just takes ownership of
   // the whole kernel :)
   debug::serial_printf("BOOTBOOT info %p\n", &info);
