@@ -94,7 +94,7 @@ void show_splash(const BOOTBOOT& info, pixel_t framebuffer[], const Tarball& ini
 int kernel_early_main(const BOOTBOOT& info, pixel_t framebuffer[]) {
   Tarball initrd((const void*)info.initrd_ptr, info.initrd_size);
   show_splash(info, framebuffer, initrd);
-  
+
   const MMapEnt* mmap = &info.mmap;
   unsigned count = (info.size - 128)/sizeof(MMapEnt);
   physMemAlloc.init_mmap(mmap, count);
@@ -132,9 +132,9 @@ extern "C" {
   shell.main();
   ASSERT_NOT_REACHED;
 }
-  
+
 [[noreturn]]
-void kernel_main() 
+void kernel_main()
 {
   // VirtMemAllocator::get().clear_ident_map();
   // debug::serial_printf("ident map cleared\n");
@@ -149,7 +149,7 @@ void kernel_main()
   // int j = 0;
   // int i = 1/j;
   // debug::serial_printf("i = %d\n", i);
-    
+
   test::pretty_print_test("malloc(128)", [&]()->bool {
     uint8_t* mem_chunk = (uint8_t*)HeapAllocator::get().malloc(128);
     if (!mem_chunk) return false;
