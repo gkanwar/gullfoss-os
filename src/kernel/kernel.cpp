@@ -30,10 +30,7 @@
 #include "terminal.h"
 #include "test.h"
 #include "util.h"
-// #include "vga.h"
 #include "virt_mem_allocator.h"
-
-// using Color = VGATerminal::Color;
 
 // Need for purely virtual functions
 extern "C" void __cxa_pure_virtual() { ASSERT_NOT_REACHED; }
@@ -124,14 +121,6 @@ void kernel_main(const BOOTBOOT& info, pixel_t framebuffer[])
   // int i = 1/j;
   // debug::serial_printf("i = %d\n", i);
     
-  // VGATerminal term;
-  // term.set_color(Color::white, Color::black);
-  // term.write_string("Welcome to the " PROJ_NAME " kernel!\n");
-  // term.set_color(Color::light_grey, Color::black);
-  // term.write_string("More features to come, tests for some specific ones run below.\n");
-  // term.write_string("Use alt-2 (or equivalent) to get to QEMU console and shutdown.\n");
-  // debug::serial_printf("terminal works!\n");
-  
   test::pretty_print_test("malloc(128)", [&]()->bool {
     uint8_t* mem_chunk = (uint8_t*)HeapAllocator::get().malloc(128);
     if (!mem_chunk) return false;

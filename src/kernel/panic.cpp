@@ -1,13 +1,10 @@
 #include "assert.h"
 #include "debug_serial.h"
 #include "kernel.h"
-#include "vga.h"
-
-using Color = VGATerminal::Color;
 
 [[noreturn]] void panic(const char* msg) {
   debug::serial_printf("\033[31mKernel panic: %s\033[0m\n", msg);
-  // TODO: Switch to VGA text mode before displaying
+  // TODO: Drop to VGA text mode and display this message?
   // VGATerminal terminal;
   // terminal.set_color(Color::white, Color::magenta);
   // terminal.clear();

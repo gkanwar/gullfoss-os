@@ -4,7 +4,6 @@
 #include "assert.h"
 #include "bootboot.h"
 #include "kernel.h"
-#include "vga.h"
 
 static PhysMemAllocator* inst;
 

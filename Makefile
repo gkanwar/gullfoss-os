@@ -62,7 +62,6 @@ KERNEL_SRCS = \
 	shell.cpp \
 	tar.cpp \
 	terminal.cpp \
-	vga.cpp \
 	virt_mem_allocator.cpp
 SYSTEM_SRCS = \
 	stdlib.cpp \
