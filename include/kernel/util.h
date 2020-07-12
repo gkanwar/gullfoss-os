@@ -1,6 +1,8 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#define UNUSED_PARAM(x) (sizeof(&x))
+
 namespace util {
 
 template<typename T, typename U>

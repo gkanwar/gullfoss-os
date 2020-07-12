@@ -1,28 +1,22 @@
 #ifndef TEST_H
 #define TEST_H
 
-#include "vga.h"
-
-using Color = VGATerminal::Color;
+#include "debug_serial.h"
 
 namespace test {
 
+#define ESC_RED "\033[31m"
+#define ESC_GREEN "\033[32m"
+#define ESC_END "\033[0m"
+
 template<typename Test>
-void pretty_print_test(const char* name, VGATerminal& term, Test t) {
-  auto color = term.get_color();
+void pretty_print_test(const char* name, Test t) {
   if (t()) {
-    term.set_color(Color::green, Color::black);
-    term.write_string("[PASS ");
-    term.write_string(name);
-    term.write_string("]\n");
+    debug::serial_printf(ESC_GREEN "[PASS %s]\n" ESC_END, name);
   }
   else {
-    term.set_color(Color::red, Color::black);
-    term.write_string("[FAIL ");
-    term.write_string(name);
-    term.write_string("]\n");
+    debug::serial_printf(ESC_RED "[FAIL %s]\n" ESC_END, name);
   }
-  term.set_color(color);
 }
 
 }

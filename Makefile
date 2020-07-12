@@ -58,8 +58,10 @@ KERNEL_SRCS = \
 	memory.cpp \
 	panic.cpp \
 	phys_mem_allocator.cpp \
+	psffont.cpp \
 	shell.cpp \
 	tar.cpp \
+	terminal.cpp \
 	vga.cpp \
 	virt_mem_allocator.cpp
 SYSTEM_SRCS = \
@@ -105,7 +107,8 @@ $(TBIN)/kernel/interrupt_impl.o: CXXFLAGS := $(CXXFLAGS) -mgeneral-regs-only
 
 INITRD_FILES := \
 	boot/sys/config \
-	boot/waterfall.bmp
+	boot/waterfall.bmp \
+	boot/texgyrecursor-regular.psf
 INITRD_OUT_FILES := $(addprefix $(TBIN)/initrd/,$(INITRD_FILES))
 
 # copy initrd files

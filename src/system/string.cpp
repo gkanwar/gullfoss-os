@@ -47,3 +47,13 @@ void* memcpy(void* dest, const void* src, size_t num) {
 }
 
 }
+
+// Make sure we have the C linkages as well
+extern "C" {
+  void* memset(void* ptr, int value, size_t num) {
+    return std::memset(ptr, value, num);
+  }
+  void* memcpy(void* dest, const void* src, size_t num) {
+    return std::memcpy(dest, src, num);
+  }
+}

@@ -6,8 +6,6 @@
 #include "kernel.h"
 #include "vga.h"
 
-using namespace std;
-
 static PhysMemAllocator* inst;
 
 PhysMemAllocator::PhysMemAllocator() : last_alloc(0) { inst = this; }
@@ -33,7 +31,7 @@ static void mark_unavail_pages(const MMapEnt* mmap, uint8_t *mem_bitmap) {
 }
 
 void PhysMemAllocator::init_mmap(const MMapEnt* mmap, unsigned count) {
-  memset(mem_bitmap, 0, sizeof(mem_bitmap));
+  std::memset(mem_bitmap, 0, sizeof(mem_bitmap));
   for (unsigned i = 0; i < count; ++i) {
     const MMapEnt* mmap_ent = mmap+i;
     debug::serial_printf("mmap %p (len %016x) type = %\n",

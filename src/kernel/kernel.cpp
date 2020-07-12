@@ -18,19 +18,22 @@
 #include "assert.h"
 #include "bootboot.h"
 #include "debug_serial.h"
+#include "framebuffer.h"
 #include "heap_allocator.h"
 #include "interrupt_manager.h"
 #include "keyboard_state.h"
 #include "kernel.h"
 #include "phys_mem_allocator.h"
+#include "psffont.h"
 #include "shell.h"
 #include "tar.h"
+#include "terminal.h"
 #include "test.h"
-#include "vga.h"
+#include "util.h"
+// #include "vga.h"
 #include "virt_mem_allocator.h"
 
-using namespace std;
-using Color = VGATerminal::Color;
+// using Color = VGATerminal::Color;
 
 // Need for purely virtual functions
 extern "C" void __cxa_pure_virtual() { ASSERT_NOT_REACHED; }
@@ -48,8 +51,7 @@ struct BitmapHeader {
   uint32_t data_offset;
 } __attribute__((packed));
 
-typedef uint32_t pixel_t;
-void show_splash(const BOOTBOOT& info, pixel_t framebuffer[]) {
+void show_splash(const BOOTBOOT& info, pixel_t framebuffer[], const Tarball& initrd) {
   if (info.fb_type != FB_ARGB) {
     // TODO: pixel reordering
     // FORNOW: splash a constant color
@@ -60,7 +62,7 @@ void show_splash(const BOOTBOOT& info, pixel_t framebuffer[]) {
       case FB_BGRA: { fill_color = 0x55ccffff; break; }
       default: { return; }
     }
-    for (unsigned i = 0; i < info.fb_size; ++i) {
+    for (unsigned i = 0; i < info.fb_size/sizeof(pixel_t); ++i) {
       framebuffer[i] = fill_color;
     }
     return;
@@ -68,7 +70,6 @@ void show_splash(const BOOTBOOT& info, pixel_t framebuffer[]) {
 
   // Normal splash display (FB_ARGB, matching bitmap file format)
   debug::serial_printf("Framebuffer format is good, loading bitmap\n");
-  Tarball initrd((const void*)info.initrd_ptr, info.initrd_size);
   const void* splash_file = initrd.find_file("waterfall.bmp");
   if (!splash_file) {
     debug::serial_printf("Failed to find splash file\n");
@@ -81,20 +82,20 @@ void show_splash(const BOOTBOOT& info, pixel_t framebuffer[]) {
     debug::serial_printf("Corrupt splash file\n");
     return;
   }
+  debug::serial_printf("Showing splash into %p\n", framebuffer);
   const pixel_t* pixel_data = (const pixel_t*)
       ((const uint8_t*)splash_file + splash_header->data_offset);
   const size_t width = 800, height = 600;
   for (unsigned row = 0; row < height; ++row) {
     const pixel_t* row_data = pixel_data + (height-row-1)*width; // bitmap stores bottom up
     pixel_t* framebuffer_row_data = framebuffer + row*info.fb_scanline/sizeof(pixel_t);
-    memcpy(framebuffer_row_data, row_data, width*sizeof(pixel_t));
+    std::memcpy(framebuffer_row_data, row_data, width*sizeof(pixel_t));
   }
 }
 
 int kernel_early_main(const BOOTBOOT& info, pixel_t framebuffer[]) {
-  debug::serial_printf("begin kernel_early_main\n");
-
-  show_splash(info, framebuffer);
+  Tarball initrd((const void*)info.initrd_ptr, info.initrd_size);
+  show_splash(info, framebuffer, initrd);
   
   const MMapEnt* mmap = &info.mmap;
   unsigned count = (info.size - 128)/sizeof(MMapEnt);
@@ -111,55 +112,53 @@ int kernel_early_main(const BOOTBOOT& info, pixel_t framebuffer[]) {
   heapAlloc.initialize(physMemAlloc, virtMemAlloc);
   debug::serial_printf("done\n");
   debug::serial_printf("heap ptr %p\n", heapAlloc.heap);
-  debug::serial_printf("end kernel_early_main\n");
   return 0;
 }
   
 [[noreturn]]
-void kernel_main(void) 
+void kernel_main(const BOOTBOOT& info, pixel_t framebuffer[]) 
 {
-  debug::serial_printf("start kernel_main\n");
   // VirtMemAllocator::get().clear_ident_map();
-  debug::serial_printf("ident map cleared\n");
+  // debug::serial_printf("ident map cleared\n");
 
   new KeyboardState;
   new InterruptManager;
   InterruptManager::get().init_interrupts();
   debug::serial_printf("interrupts enabled!\n");
 
-  VGATerminal term;
-  term.set_color(Color::white, Color::black);
-  term.write_string("Welcome to the " PROJ_NAME " kernel!\n");
-  term.set_color(Color::light_grey, Color::black);
-  term.write_string("More features to come, tests for some specific ones run below.\n");
-  term.write_string("Use alt-2 (or equivalent) to get to QEMU console and shutdown.\n");
-  debug::serial_printf("terminal works!\n");
+  // VGATerminal term;
+  // term.set_color(Color::white, Color::black);
+  // term.write_string("Welcome to the " PROJ_NAME " kernel!\n");
+  // term.set_color(Color::light_grey, Color::black);
+  // term.write_string("More features to come, tests for some specific ones run below.\n");
+  // term.write_string("Use alt-2 (or equivalent) to get to QEMU console and shutdown.\n");
+  // debug::serial_printf("terminal works!\n");
   
-  test::pretty_print_test("malloc(128)", term, [&]()->bool {
+  test::pretty_print_test("malloc(128)", [&]()->bool {
     uint8_t* mem_chunk = (uint8_t*)HeapAllocator::get().malloc(128);
     if (!mem_chunk) return false;
-    memset((void*)mem_chunk, 0xff, 128);
+    std::memset((void*)mem_chunk, 0xff, 128);
     uint8_t byte = mem_chunk[77];
     return byte == 0xff;
   });
-  test::pretty_print_test("malloc(8)", term, []()->bool {
+  test::pretty_print_test("malloc(8)", []()->bool {
     uint8_t* mem_chunk = (uint8_t*)HeapAllocator::get().malloc(8);
     if (!mem_chunk) return false;
-    memset((void*)mem_chunk, 0xab, 8);
+    std::memset((void*)mem_chunk, 0xab, 8);
     uint8_t byte = mem_chunk[5];
     return byte == 0xab;
   });
-  test::pretty_print_test("malloc(16)", term, []()->bool {
+  test::pretty_print_test("malloc(16)", []()->bool {
     uint8_t* mem_chunk = (uint8_t*)HeapAllocator::get().malloc(16);
     if (!mem_chunk) return false;
-    memset((void*)mem_chunk, 0xcd, 16);
+    std::memset((void*)mem_chunk, 0xcd, 16);
     uint8_t byte = mem_chunk[13];
     return byte == 0xcd;
   });
-  test::pretty_print_test("malloc(32)", term, []()->bool {
+  test::pretty_print_test("malloc(32)", []()->bool {
     uint8_t* mem_chunk = (uint8_t*)HeapAllocator::get().malloc(32);
     if (!mem_chunk) return false;
-    memset((void*)mem_chunk, 0x88, 32);
+    std::memset((void*)mem_chunk, 0x88, 32);
     uint8_t byte = mem_chunk[27];
     return byte == 0x88;
   });
@@ -167,7 +166,16 @@ void kernel_main(void)
 
   // Run our first real (kernel mode) app! For now it just takes ownership of
   // the whole kernel :)
+  debug::serial_printf("BOOTBOOT info %p\n", &info);
+  debug::serial_printf("...fb_size = %llu, (%llu x %llu)\n", info.fb_size,
+                       info.fb_width, info.fb_height);
+  Tarball initrd((const void*)info.initrd_ptr, info.initrd_size);
+  const uint8_t* psf_buffer = (const uint8_t*)
+      initrd.find_file("texgyrecursor-regular.psf");
+  PSFFont font(psf_buffer);
   USKeyMap key_map;
+  Framebuffer fb(framebuffer, info.fb_size, info.fb_height, info.fb_width, info.fb_scanline);
+  FBTerminal term(&fb, font);
   app::Shell shell(key_map, term);
   KeyboardState::get().set_subscriber(shell);
   shell.main();
@@ -185,11 +193,19 @@ extern "C" {
   extern void _init();
 
   [[noreturn]] void _start() {
+    // TODO: why does this value not come in correctly from BOOTBOOT?
+    _bootboot.fb_size = sizeof(pixel_t)*_bootboot.fb_scanline*_bootboot.fb_height;
     // Set up kernel memory management
+    debug::serial_printf("begin kernel_early_main\n");
+    debug::serial_printf("bootboot info fb_size %llu\n", _bootboot.fb_size);
     kernel_early_main(_bootboot, (pixel_t*)&_bootboot_fb);
+    debug::serial_printf("end kernel_early_main\n");
     // Run global ctors
+    debug::serial_printf("start global ctors\n");
     _init();
+    debug::serial_printf("end global ctors\n");
     // Enter usual C++ happy land, where we can use new, etc.
-    kernel_main();
+    debug::serial_printf("start kernel_main\n");
+    kernel_main(_bootboot, (pixel_t*)&_bootboot_fb);
   }
 }
