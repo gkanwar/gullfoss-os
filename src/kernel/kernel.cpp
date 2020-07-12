@@ -100,13 +100,6 @@ int kernel_early_main(const BOOTBOOT& info, pixel_t framebuffer[]) {
   const MMapEnt* mmap = &info.mmap;
   unsigned count = (info.size - 128)/sizeof(MMapEnt);
   physMemAlloc.init_mmap(mmap, count);
-  // debug::serial_printf("phys mem bitmap:\n");
-  // for (int i = 0; i < (1 << 8); ++i) {
-  //   debug::serial_printf("%08x ", ((uint32_t*)physMemAlloc.mem_bitmap)[i]);
-  // }
-  // debug::serial_printf("...\n");
-  // debug::serial_printf("init page dir...\n");
-  // debug::serial_printf("done\n");
   virtMemAlloc.initialize(&physMemAlloc);
   debug::serial_printf("init heap pages...\n");
   heapAlloc.initialize(physMemAlloc, virtMemAlloc);
@@ -126,6 +119,11 @@ void kernel_main(const BOOTBOOT& info, pixel_t framebuffer[])
   InterruptManager::get().init_interrupts();
   debug::serial_printf("interrupts enabled!\n");
 
+  // TEST: Try to trigger div0 exception
+  // int j = 0;
+  // int i = 1/j;
+  // debug::serial_printf("i = %d\n", i);
+    
   // VGATerminal term;
   // term.set_color(Color::white, Color::black);
   // term.write_string("Welcome to the " PROJ_NAME " kernel!\n");

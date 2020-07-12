@@ -12,9 +12,8 @@ void FBTerminal::putc_at(char c, pixel_t fg_color, size_t row, size_t col) {
       + col*charwidth;
   for (unsigned glyph_r = 0; glyph_r < charheight;
        ++glyph_r, base += framebuffer->scanline/sizeof(pixel_t)) {
-    debug::serial_printf("glyph row %02x\n", glyph[glyph_r]);
     for (unsigned i = 0; i < charwidth; ++i) {
-      if (util::get_bit(glyph[glyph_r], i)) {
+      if (util::get_bit(glyph[glyph_r], charwidth-i)) {
         base[i] = fg_color;
       }
       else {

@@ -19,6 +19,8 @@ struct psf1_header {
   unsigned char charsize;
 };
 
+using CharMap = PSFFont::CharMap;
+
 static void fill_undef_glyph(uint8_t* undef_glyph, uint8_t charsize) {
   // 1px margin all around
   undef_glyph[0] = 0;
@@ -26,6 +28,37 @@ static void fill_undef_glyph(uint8_t* undef_glyph, uint8_t charsize) {
   for (uint8_t i = 1; i < charsize-1; ++i) {
     undef_glyph[i] = 0b01111110;
   }
+}
+
+// FORNOW: parse the base char mappings, skip composites
+static unsigned parse_unicode_map(
+    const uint16_t* map_info, CharMap* out,
+    const uint8_t* glyphs, unsigned charsize, unsigned num_glyphs) {
+  unsigned count = 0;
+  unsigned glyph_i = 0;
+  bool scanning_base_chars = true;
+  while (glyph_i < num_glyphs) {
+    if (*map_info == PSF1_SEP) {
+      ++glyph_i;
+      scanning_base_chars = true;
+    }
+    else if (*map_info == PSF1_SEQ) {
+      // after PSF1_SEQ we get composite unicodes (I think?)
+      scanning_base_chars = false;
+    }
+    else if (scanning_base_chars) {
+      // it's a base unicode char we want to translate
+      if (out) {
+        out[count] = {
+          .ucs_char = *map_info,
+          .glyph = &glyphs[glyph_i*charsize]
+        };
+      }
+      ++count;
+    }      
+    ++map_info;
+  }
+  return count;
 }
 
 PSFFont::PSFFont(const uint8_t* psf_buffer) {
@@ -38,49 +71,22 @@ PSFFont::PSFFont(const uint8_t* psf_buffer) {
   num_glyphs = util::get_bit(header->mode, PSF1_MODE512) ? 512 : 256;
   glyphs = (const uint8_t*)(header+1);
   const uint16_t* map_info = (const uint16_t*)(glyphs + num_glyphs*charsize);
-  unsigned j = 0;
-  for (unsigned i = 0; i < num_glyphs; ++i) {
-    const uint8_t* cur_glyph = &glyphs[i*charsize];
-    bool skip = false;
-    while (*map_info != PSF1_SEP) {
-      if (*map_info == PSF1_SEQ) {
-        // TODO: handle sequenced unicode chars
-        ++map_info;
-        skip = true;
-        continue;
-      }
-      if (!skip) {
-        char_map[j] = {
-          .ucs_char = *map_info,
-          .glyph = cur_glyph
-        };
-        ++j;
-      }
-      ++map_info;
-      debug::serial_printf("... map info done (j = %u)\n", j);
-      // FORNOW HACK!!!
-      if (j > MAX_CHAR_MAP) break;
-      debug::serial_printf("... map info continue\n", j);
-    }
-    ++map_info;
-    // FORNOW HACK!!!
-    if (j > MAX_CHAR_MAP) break;
-  }
-  // Last CharMap is a special "undefined" glyph
+  // Stage 1: count how many characters we have mapped
+  char_map_count = parse_unicode_map(map_info, nullptr, glyphs, charsize, num_glyphs);
+  char_map = new CharMap[char_map_count];
+  // Stage 2: write mappings into instantiated array
+  parse_unicode_map(map_info, char_map, glyphs, charsize, num_glyphs);
+  // make sure to display something for undefined characters
   undef_glyph = new uint8_t[charsize];
   fill_undef_glyph(undef_glyph, charsize);
-  char_map[MAX_CHAR_MAP] = {
-    .ucs_char = 0,
-    .glyph = undef_glyph
-  };
 }
 
 const uint8_t* PSFFont::to_glyph(uint16_t ucs_char) const {
   // FORNOW dumb linear scan
-  for (unsigned i = 0; i < MAX_CHAR_MAP; ++i) {
+  for (unsigned i = 0; i < char_map_count; ++i) {
     if (char_map[i].ucs_char == ucs_char) {
       return char_map[i].glyph;
     }
   }
-  return char_map[MAX_CHAR_MAP].glyph;
+  return undef_glyph;
 }
