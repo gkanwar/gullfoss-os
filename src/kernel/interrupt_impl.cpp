@@ -57,6 +57,7 @@ __attribute__((interrupt)) void handle_keyboard(int_frame*) {
   const uint8_t ps2_data = 0x60;
   uint8_t c = io::in8(ps2_data);
   KeyboardState::get().handle_scan_code(c);
+  debug::serial_printf("INTERRUPT: key scan code %02x\n", c);
   InterruptManager::pic_send_eoi(0x1);
 }
 

@@ -5,4 +5,4 @@ if [[ "x${TARGET}" == "x" ]]; then
     echo "Usage: $0 <target>"
     exit 1
 fi
-qemu-system-i386 -no-reboot -serial stdio -kernel bin/${TARGET}/kernel.bin
+qemu-system-x86_64 -no-reboot -serial stdio -cdrom bin/${TARGET}/gullfoss.iso

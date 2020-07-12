@@ -19,10 +19,10 @@ union alignas(HEAP_BLOCK_ALIGN) HeapAllocator::HeapBlock {
   // data implicitly follows
 } __attribute__((packed));
 
-void HeapAllocator::init_heap_pages(
+void HeapAllocator::initialize(
     PhysMemAllocator& physMemAlloc, VirtMemAllocator& virtMemAlloc) {
-  // grab a 4MiB contiguous region of kernel virtual memory
-  heap = (HeapBlock*)virtMemAlloc.reserve_block();
+  // grab a 2MiB contiguous region of kernel virtual memory
+  heap = (HeapBlock*)virtMemAlloc.find_free_block();
 
   assert(HEAP_PAGES % 32 == 0, "heap must be allocated in 32-page blocks");
   const unsigned n_chunks = HEAP_PAGES / CHUNK_PAGES;
@@ -131,7 +131,6 @@ void* HeapAllocator::block_malloc(size_t size) {
 
 void* HeapAllocator::malloc(size_t size) {
   assert(heap, "HeapAllocator not initialized");
-  debug::serial_printf("malloc heap ptr %p\n", heap);
   if (size > HEAP_PAGES * PAGE_SIZE) {
     return nullptr;
   }

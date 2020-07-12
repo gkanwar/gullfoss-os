@@ -27,15 +27,17 @@
 #include "tar.h"
 #include "test.h"
 #include "vga.h"
-// #include "virt_mem_allocator.h"
+#include "virt_mem_allocator.h"
 
 using namespace std;
 using Color = VGATerminal::Color;
 
+// Need for purely virtual functions
+extern "C" void __cxa_pure_virtual() { ASSERT_NOT_REACHED; }
 
 // PMA, VMA, HA held globally because they exist before the heap exists
 PhysMemAllocator physMemAlloc;
-// VirtMemAllocator virtMemAlloc;
+VirtMemAllocator virtMemAlloc;
 HeapAllocator heapAlloc;
 
 struct BitmapHeader {
@@ -90,8 +92,6 @@ void show_splash(const BOOTBOOT& info, pixel_t framebuffer[]) {
 }
 
 int kernel_early_main(const BOOTBOOT& info, pixel_t framebuffer[]) {
-  // TODO: Remove entirely, assuming bootboot works out
-  // debug::init_serial();
   debug::serial_printf("begin kernel_early_main\n");
 
   show_splash(info, framebuffer);
@@ -99,17 +99,16 @@ int kernel_early_main(const BOOTBOOT& info, pixel_t framebuffer[]) {
   const MMapEnt* mmap = &info.mmap;
   unsigned count = (info.size - 128)/sizeof(MMapEnt);
   physMemAlloc.init_mmap(mmap, count);
-  debug::serial_printf("phys mem bitmap:\n");
-  for (int i = 0; i < (1 << 8); ++i) {
-    debug::serial_printf("%08x ", ((uint32_t*)physMemAlloc.mem_bitmap)[i]);
-  }
-  debug::serial_printf("...\n");
-  debug::serial_printf("init page dir...\n");
-  // TODO!!!!
-  // virtMemAlloc.init_page_dir(init_page_dir, init_page_tables);
-  debug::serial_printf("done\n");
+  // debug::serial_printf("phys mem bitmap:\n");
+  // for (int i = 0; i < (1 << 8); ++i) {
+  //   debug::serial_printf("%08x ", ((uint32_t*)physMemAlloc.mem_bitmap)[i]);
+  // }
+  // debug::serial_printf("...\n");
+  // debug::serial_printf("init page dir...\n");
+  // debug::serial_printf("done\n");
+  virtMemAlloc.initialize(&physMemAlloc);
   debug::serial_printf("init heap pages...\n");
-  // heapAlloc.init_heap_pages(physMemAlloc, virtMemAlloc);
+  heapAlloc.initialize(physMemAlloc, virtMemAlloc);
   debug::serial_printf("done\n");
   debug::serial_printf("heap ptr %p\n", heapAlloc.heap);
   debug::serial_printf("end kernel_early_main\n");

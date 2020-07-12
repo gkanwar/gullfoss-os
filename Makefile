@@ -60,8 +60,8 @@ KERNEL_SRCS = \
 	phys_mem_allocator.cpp \
 	shell.cpp \
 	tar.cpp \
-	vga.cpp #\
-	# virt_mem_allocator.cpp
+	vga.cpp \
+	virt_mem_allocator.cpp
 SYSTEM_SRCS = \
 	stdlib.cpp \
 	string.cpp

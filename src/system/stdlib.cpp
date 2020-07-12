@@ -192,7 +192,7 @@ static format_spec parse_format_spec(const char** pfmt) {
   return spec;
 }
 
-static size_t unsigned_to_buf(unsigned arg, char* buf) {
+static size_t unsigned_to_buf(long long unsigned arg, char* buf) {
   size_t len = 0;
   while (arg > 0) {
     buf[len] = '0' + arg % 10;
@@ -201,7 +201,7 @@ static size_t unsigned_to_buf(unsigned arg, char* buf) {
   }
   return len;
 }
-static size_t hex_to_buf(unsigned arg, char* buf) {
+static size_t hex_to_buf(long long unsigned arg, char* buf) {
   size_t len = 0;
   while (arg > 0) {
     if (arg % 16 < 10) {
@@ -340,9 +340,9 @@ static void format_arg(Writer putc, const char** pfmt, va_list& args) {
       spec.flags |= format_spec::flag::ZeroPad;
       spec.min_width = sizeof(void*)*2; // 2 hex chars per byte
       #ifdef __LP64__
-      format_hex(putc, spec, (uint64_t)va_arg(args, void*));
+      format_hex(putc, spec, (uint64_t)va_arg(args, long long unsigned));
       #else
-      format_hex(putc, spec, (uint32_t)va_arg(args, void*));
+      format_hex(putc, spec, (uint32_t)va_arg(args, uint32_t));
       #endif
       break;
     case 's':

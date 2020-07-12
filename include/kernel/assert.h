@@ -2,12 +2,18 @@
 #define ASSERT_H
 
 #ifdef NDEBUG
+
 #  define assert(x,s)
+
 #else
+
 #  define MACRO_TO_STR_IN(x) #x
 #  define MACRO_TO_STR(x) MACRO_TO_STR_IN(x)
 #  define FILE_CONTEXT __FILE__ ":" MACRO_TO_STR(__LINE__)
 #  define assert(x,s) if (!(x)) { panic(FILE_CONTEXT "\nAssert '" #x "' failed\nReason " #s); }
+#  define PANIC_NOT_IMPLEMENTED(s) panic(FILE_CONTEXT "\nNot implemented: " #s)
+#  define ASSERT_NOT_REACHED panic(FILE_CONTEXT "\nShould not be reached")
+
 #endif
 
 // "Pretty"-print our panic message and halt
