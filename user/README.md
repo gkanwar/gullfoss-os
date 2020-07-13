@@ -101,12 +101,13 @@ All would be well and good, and we could just use the IO monad at the
 highest level, except that we also want some sort of multitasking and
 probably real concurrency too. Pure functions by definition only depend
 on their current inputs, so reduce to two cases
-(1) Completely defined pure functions, in which case there is no demand
-    on data consistency in inputs and we can evaluate inputs at varying
-    times (so long as the input datatypes themselves are satisfied).
-(2) Partially defined pure functions, which expect inputs in their domain
-    of definition. In this case, program correctness somehow depends on
-    their inputs being consistently grabbed from a single real world.
+
+1. Completely defined pure functions, in which case there is no demand
+   on data consistency in inputs and we can evaluate inputs at varying
+   times (so long as the input datatypes themselves are satisfied).
+2. Partially defined pure functions, which expect inputs in their domain
+   of definition. In this case, program correctness somehow depends on
+   their inputs being consistently grabbed from a single real world.
 
 A "simple" solution is to define only total functions and never encounter this
 case. However, promoting functions to total functions cannot solve everything,
