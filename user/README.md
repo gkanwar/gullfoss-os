@@ -111,9 +111,14 @@ on their current inputs, so reduce to two cases
 
 A "simple" solution is to define only total functions and never encounter this
 case. However, promoting functions to total functions cannot solve everything,
-because it might just mean that your user code is returning useless values based
-on a race condition instead of crashing, like `Nothing` when you expect values
-out.
+because it might just mean that your user code is returning useless values like
+`Nothing` based on a race condition (instead of crashing). This still prevents
+usable execution of your application from the perspective of the user. (Sidebar:
+this is one of the things I hate most about Mathematica's language. Just because
+outer functions can continue to apply to garbage results from inner functions
+doesn't mean it's useful to do so, and short-circuiting failure e.g. in the
+context of the Maybe monad is a really nice thing. However, this should still be
+considered failure in some cases.)
 
 Let's come up with examples, because it should make solving the design a lot
 easier.
