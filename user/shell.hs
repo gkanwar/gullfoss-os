@@ -1,6 +1,6 @@
 import Data.List
 
--- Sketch of a terminal user-space application
+-- Sketch of a shell user-space application
 
 newtype Token = Token {str :: String}
   deriving (Eq,Show)

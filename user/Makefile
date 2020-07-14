@@ -1,9 +1,11 @@
 BIN := bin
 
-.PHONY: all
+$(shell mkdir -p $(BIN))
+
+.PHONY: all clean
 
 SRCS := \
-	terminal.hs
+	shell.hs
 OUTPUTS := $(addprefix $(BIN)/,$(patsubst %.hs,%,$(SRCS)))
 
 all: $(OUTPUTS)
@@ -11,3 +13,5 @@ all: $(OUTPUTS)
 $(BIN)/%: %.hs
 	ghc $^ -outputdir $(BIN) -o $@
 
+clean:
+	rm -r $(BIN)
