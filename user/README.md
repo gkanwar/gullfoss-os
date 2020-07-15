@@ -87,7 +87,7 @@ new_world_state :: RealWorld
 f :: RealWorld -> RealWorld
 new_world_state = f(old_world_state)
 ```
-pure functions do not depend on world_state,
+pure functions do not depend on `world_state`,
 ```
 pure :: a, b, c, ... -> a', b', c', ...
 ```
@@ -122,3 +122,34 @@ considered failure in some cases.)
 
 Let's come up with examples, because it should make solving the design a lot
 easier.
+
+
+Software goals
+==============
+Listing bits of software we would at bare minimum like to support, to be sure
+we are providing a comprehensive graphical OS:
+
+1. Visual terminal
+2. Compositing window manager (tiling? xmonad fork?)
+3. Command line tools (shell, wget, vim/emacs/nano, less)
+4. Simple 2D game (snake?)
+5. Web server
+6. SSH client
+7. Browser (at least static HTML, CSS/JS are bonus)
+
+Dealing with arrays of unboxed types seems doable with `Data.Vector`. We can
+dodge some memory and computational bloat by being careful about strict typing
+(see e.g. the abundant use of ! in xmonad). There are nice papers on semantics
+of concurrency out there. STM in particular seems powerful (if we back it up
+with an efficient implementation that leverages our shared memory OS design?).
+
+In general, it seems the software engineering aspect of the user-space code is
+not likely to be an issue. I worry about performance engineering.
+
+
+Performance
+===========
+TODO: how can we convince ourselves that a whole suite of varied programs can
+run concurrently and efficiently using a purely functional and lazy language
+like Haskell? Do we need to consider sacrificing some of the niceness of the
+language to gain performance and efficiency?
