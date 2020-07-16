@@ -5,14 +5,19 @@ APP := app
 
 $(shell mkdir -p $(BIN)/app)
 
-.PHONY: all guest_os haskell_lib clean
+.PHONY: all guest_os haskell_lib clean apps shell wallpaper
 
 CXXFLAGS := -std=c++17 -O3 -I/usr/local/lib/ghc/include
 LDFLAGS := -liconv -lglfw -framework OpenGL
 
 APP_SRCS := \
-	shell.hs
-APP_OUTS := $(addprefix $(BIN)/app/,$(APP_SRCS:%.hs=%))
+	shell.hs \
+	wallpaper.hs
+APP_OBJS := $(addprefix $(BIN)/app/,$(APP_SRCS:%.hs=%.o))
+APPS := \
+	shell \
+	wallpaper
+APP_OUTS := $(addprefix $(BIN)/app/,$(APPS))
 LIB_SRCS := \
 	Graphics/Wayland.hs
 LIB_OBJS := $(addprefix $(BIN)/,$(LIB_SRCS:%.hs=%.o))
@@ -22,10 +27,18 @@ GUEST_OBJS := $(addprefix $(BIN)/,$(GUEST_SRCS:%.cpp=%.o))
 $(info GUEST_OBJS $(GUEST_OBJS))
 
 
-all: $(APP_OUTS) guest_os
+all: apps guest_os
 
-$(APP_OUTS): $(BIN)/app/%: $(APP)/%.hs
+# all dynamic runnables
+$(BIN)/app/shell: $(BIN)/app/shell.o
 	ghc $^ -outputdir $(BIN)/app -o $@
+$(BIN)/app/wallpaper: $(BIN)/app/wallpaper.o $(APP)/wallpaper.jpg
+	# TODO: this doesn't link the JPG yet
+	ghc $^ -outputdir $(BIN)/app -o $@
+apps: $(APP_OUTS)
+
+$(APP_OBJS): $(BIN)/app/%.o: $(APP)/%.hs
+	ghc $^ -outputdir $(BIN)/app -c -o $@
 $(LIB_OBJS): $(BIN)/%.o: $(LIB)/%.hs
 	ghc $^ -outputdir $(BIN)
 

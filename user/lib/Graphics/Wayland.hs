@@ -2,7 +2,9 @@
 
 module Graphics.Wayland where
 
-foreign export ccall entry :: IO ()
+import qualified Data.Vector.Unboxed as V
 
+-- Just a quick test
+foreign export ccall entry :: IO ()
 entry :: IO ()
 entry = putStrLn "hello world!"
