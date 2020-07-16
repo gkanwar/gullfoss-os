@@ -6,6 +6,9 @@
 #include <thread>
 #include <stdint.h>
 
+// FORNOW: pull in haskell FFIs, we statically link against the lib
+#include "Graphics/Wayland_stub.h"
+
 using namespace std::chrono_literals;
 typedef std::chrono::high_resolution_clock hr_clock;
 typedef std::chrono::milliseconds ms;
@@ -65,7 +68,11 @@ bool link_shader_prog(GLuint shader_prog, GLuint vert_shader, GLuint frag_shader
   return success;
 }
 
-int main() {
+int main(int argc, char** argv) {
+  // FORNOW: test Haskell entry point
+  hs_init(&argc, &argv);
+  entry();
+  
   if (!glfwInit()) return 1;
 
   #ifdef __APPLE__
@@ -183,5 +190,6 @@ int main() {
   glDeleteProgram(shader_prog);
 
   glfwTerminate();
+  hs_exit();
   return 0;
 }
