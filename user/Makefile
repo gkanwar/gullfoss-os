@@ -32,8 +32,7 @@ all: apps guest_os
 # all dynamic runnables
 $(BIN)/app/shell: $(BIN)/app/shell.o
 	ghc $^ -outputdir $(BIN)/app -o $@
-$(BIN)/app/wallpaper: $(BIN)/app/wallpaper.o $(APP)/wallpaper.jpg
-	# TODO: this doesn't link the JPG yet
+$(BIN)/app/wallpaper: $(BIN)/app/wallpaper.o
 	ghc $^ -outputdir $(BIN)/app -o $@
 apps: $(APP_OUTS)
 
