@@ -1,6 +1,7 @@
 BIN := bin
 LIB := lib
 GUEST := guest_os
+APP := app
 
 $(shell mkdir -p $(BIN)/app)
 
@@ -23,7 +24,7 @@ $(info GUEST_OBJS $(GUEST_OBJS))
 
 all: $(APP_OUTS) guest_os
 
-$(APP_OUTS): $(BIN)/app/%: %.hs
+$(APP_OUTS): $(BIN)/app/%: $(APP)/%.hs
 	ghc $^ -outputdir $(BIN)/app -o $@
 $(LIB_OBJS): $(BIN)/%.o: $(LIB)/%.hs
 	ghc $^ -outputdir $(BIN)
