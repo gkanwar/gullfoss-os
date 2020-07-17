@@ -1,0 +1,22 @@
+-- NOTE: We are only using cabal for dependencies FORNOW
+cabal-version:       >=1.10
+
+name:                gullfoss-apps
+version:             0.1.0.0
+synopsis:            User-space apps gullfoss
+license:             MIT
+license-file:        LICENSE.txt
+author:              Gurtej Kanwar
+maintainer:          gurtejkanwar@gmail.com
+build-type:          Simple
+
+executable wallpaper
+  main-is: wallpaper.hs
+  build-depends: base,
+                 file-embed,
+                 JuicyPixels,
+                 vector
+
+executable shell
+  main-is: shell.hs
+  build-depends: base

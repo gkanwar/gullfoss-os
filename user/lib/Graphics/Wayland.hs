@@ -2,45 +2,43 @@
 
 module Graphics.Wayland where
 
-import Codec.Picture.Repa (Img, RGBA, convertImage, imgData)
-import Codec.Picture.Types (PixelRGBA8(..), PackeablePixel, Image, generateImage)
+import qualified Codec.Picture as P
+import qualified Codec.Picture.Types as PT
 import Control.Concurrent as CC
-import Data.Array.Repa (toUnboxed, computeUnboxedS)
+import Control.Monad.Primitive
+import Control.Monad.ST
 import qualified Data.Vector.Storable as S
-import qualified Data.Vector.Unboxed as U
+import qualified Data.Vector.Storable.Mutable as SM
 import Foreign
-import Foreign.Ptr
+
+-- We natively work with RGBA8 images
+type NativeImage s = PT.MutableImage s P.PixelRGBA8
+
+makePixel :: Int -> Int -> Int -> Int -> P.PixelRGBA8
+makePixel r g b a =
+  let s = fromIntegral . min 0xff
+  in P.PixelRGBA8 (s r) (s g) (s b) (s a)
 
 -- Compositor interacts with clients and keeps an up-to-date committed screen
 -- buffer that we can render from.
-compositorThread :: S.Vector Word8 -> MVar (S.Vector Word8) -> IO ()
-compositorThread pixels out = do
-  tryPutMVar out pixels
-  -- TODO: update pixels contents
+compositorThread :: Int -> Int -> Ptr Word32 -> IO ()
+compositorThread width height ptr = do
+  fp <- (newForeignPtr_ ptr)
+  let d = SM.unsafeFromForeignPtr0 fp (width*height)
+      screen = PT.MutableImage width height d in do
+    stToIO $ P.writePixel screen 50 50 (PT.packPixel (makePixel 0xff 0xff 0xff 0xff))
+    stToIO $ P.writePixel screen 50 51 (PT.packPixel (makePixel 0xff 0xff 0xff 0xff))
   CC.threadDelay 5000
-  compositorThread pixels out
-
-foreign export ccall waylandGetScreen :: StablePtr (MVar (S.Vector Word8)) -> IO (Ptr Word8)
-waylandGetScreen handle = do
-  ptr <- deRefStablePtr handle
-  pixels <- takeMVar ptr
-  S.unsafeWith pixels return
-
-blackImage :: Int -> Int -> Image PixelRGBA8
-blackImage width height =
-  let s = fromIntegral . min 0xff
-  in generateImage (\x y-> PixelRGBA8 (s (x+y)) (s x) (s y) (s 0xff)) width height
+  compositorThread width height ptr
 
 -- Start the main compositor thread
-foreign export ccall waylandStartThread :: Int -> Int -> IO (StablePtr (MVar (S.Vector Word8)))
-waylandStartThread :: Int -> Int -> IO (StablePtr (MVar (S.Vector Word8)))
-waylandStartThread width height = do
-  out <- newEmptyMVar
-  let screen = (convertImage (blackImage width height)) :: Img RGBA
-      pixels = (U.convert (toUnboxed (computeUnboxedS (imgData screen)))) :: S.Vector Word8
-    in do
-    CC.forkIO (compositorThread pixels out)
-    -- TODO: finalizer?
-    ptr <- newStablePtr out
-    putStrLn "threads started!"
-    return ptr
+foreign export ccall waylandStart :: Int -> Int -> Ptr Word32 -> IO ()
+waylandStart :: Int -> Int -> Ptr Word32 -> IO ()
+waylandStart width height ptr = do
+  fp <- (newForeignPtr_ ptr)
+  let d = SM.unsafeFromForeignPtr0 fp (width*height)
+      screen = PT.MutableImage width height d in
+    stToIO $ PT.fillImageWith screen (PT.packPixel (makePixel 0x08 0x08 0x08 0xff))
+  _ <- CC.forkIO (compositorThread width height ptr)
+  putStrLn "threads started!"
+

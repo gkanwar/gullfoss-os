@@ -1,0 +1,3 @@
+-- NOTE: We are only using cabal for dependencies FORNOW
+packages: */*.cabal
+shared: false

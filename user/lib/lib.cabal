@@ -1,0 +1,21 @@
+-- NOTE: We are only using cabal for dependencies FORNOW
+cabal-version:       >=1.10
+
+name:                gullfoss-lib
+version:             0.1.0.0
+synopsis:            User-space OS library for gullfoss
+license:             MIT
+license-file:        LICENSE.txt
+author:              Gurtej Kanwar
+maintainer:          gurtejkanwar@gmail.com
+build-type:          Simple
+
+library
+  exposed-modules: Graphics.Wayland
+  build-depends: base >=4.13 && <4.14,
+                 vector >= 0.12,
+                 repa >= 3.4,
+                 JuicyPixels >= 3.3,
+                 cabal-cargs
+  default-language: Haskell2010
+  ghc-options: -O2 -Wall
