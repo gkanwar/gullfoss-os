@@ -13,18 +13,18 @@ import Foreign.Ptr
 
 -- Compositor interacts with clients and keeps an up-to-date committed screen
 -- buffer that we can render from.
-compositorThread :: Img RGBA -> MVar (Img RGBA) -> IO ()
-compositorThread screen out = do
-  tryPutMVar out screen
-  -- TODO: update screen contents
-  CC.threadDelay 10000
-  compositorThread screen out
+compositorThread :: S.Vector Word8 -> MVar (S.Vector Word8) -> IO ()
+compositorThread pixels out = do
+  tryPutMVar out pixels
+  -- TODO: update pixels contents
+  CC.threadDelay 5000
+  compositorThread pixels out
 
-foreign export ccall waylandGetScreen :: StablePtr (MVar (Img RGBA)) -> IO (Ptr Word8)
+foreign export ccall waylandGetScreen :: StablePtr (MVar (S.Vector Word8)) -> IO (Ptr Word8)
 waylandGetScreen handle = do
   ptr <- deRefStablePtr handle
-  screen <- takeMVar ptr
-  S.unsafeWith (U.convert (toUnboxed (computeUnboxedS (imgData screen)))) return
+  pixels <- takeMVar ptr
+  S.unsafeWith pixels return
 
 blackImage :: Int -> Int -> Image PixelRGBA8
 blackImage width height =
@@ -32,12 +32,14 @@ blackImage width height =
   in generateImage (\x y-> PixelRGBA8 (s (x+y)) (s x) (s y) (s 0xff)) width height
 
 -- Start the main compositor thread
-foreign export ccall waylandStartThread :: Int -> Int -> IO (StablePtr (MVar (Img RGBA)))
-waylandStartThread :: Int -> Int -> IO (StablePtr (MVar (Img RGBA)))
+foreign export ccall waylandStartThread :: Int -> Int -> IO (StablePtr (MVar (S.Vector Word8)))
+waylandStartThread :: Int -> Int -> IO (StablePtr (MVar (S.Vector Word8)))
 waylandStartThread width height = do
   out <- newEmptyMVar
-  let screen = (convertImage (blackImage width height)) :: Img RGBA in do
-    CC.forkIO (compositorThread screen out)
+  let screen = (convertImage (blackImage width height)) :: Img RGBA
+      pixels = (U.convert (toUnboxed (computeUnboxedS (imgData screen)))) :: S.Vector Word8
+    in do
+    CC.forkIO (compositorThread pixels out)
     -- TODO: finalizer?
     ptr <- newStablePtr out
     putStrLn "threads started!"

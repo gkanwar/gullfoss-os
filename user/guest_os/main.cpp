@@ -162,11 +162,17 @@ int main(int argc, char** argv) {
 
   auto last_frame = hr_clock::now();
   unsigned ind = 0;
+  uint8_t* new_screen = nullptr;
   while (!glfwWindowShouldClose(window)) {
     auto now = hr_clock::now();
+    if (!new_screen) {
+      new_screen = (uint8_t*)waylandGetScreen(wayland_handle);
+    }
     if ((now - last_frame) >= 16ms) {
+      std::cout << "frame! ("
+                << std::chrono::duration_cast<ms>(now-last_frame).count()
+                << "ms)" << std::endl;
       last_frame = now;
-      uint8_t* new_screen = (uint8_t*)waylandGetScreen(wayland_handle);
       // blit in damage (TODO: smart blit?)
       glBindTexture(GL_TEXTURE_2D, tex);
       glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, new_screen);
@@ -175,9 +181,9 @@ int main(int argc, char** argv) {
       glBindVertexArray(vao);
       glDrawArrays(GL_TRIANGLES, 0, NVERTS);
       glfwSwapBuffers(window);
+      new_screen = nullptr;
     }
     glfwPollEvents();
-    std::this_thread::sleep_for(10ms);
   }
 
   glDeleteVertexArrays(1, &vao);
