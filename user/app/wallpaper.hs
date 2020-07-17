@@ -22,10 +22,10 @@ defaultWallpaper =
     Right (ImageYCbCr8 img) -> convertImage (pixelMap (
       \x -> case x of PixelRGB8 r g b -> PixelRGBA8 r g b (fromIntegral 0xff)
       ) ((convertImage img) :: Image PixelRGB8))
-    _ -> simpleWallpaper
+    _ -> blackImage width height
 
-simpleWallpaper :: Image PixelRGBA8
-simpleWallpaper =
+blackImage :: Int -> Int -> Image PixelRGBA8
+blackImage width height =
   let s = fromIntegral . min 0xff
   in generateImage (\x y-> PixelRGBA8 (s (x+y)) (s x) (s y) (s 0xff)) width height
 

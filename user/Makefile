@@ -8,7 +8,7 @@ $(shell mkdir -p $(BIN)/app)
 .PHONY: all guest_os haskell_lib clean apps shell wallpaper
 
 CXXFLAGS := -std=c++17 -O3 -I/usr/local/lib/ghc/include
-LDFLAGS := -liconv -lglfw -framework OpenGL
+LDFLAGS := -liconv -lz -lglfw -framework OpenGL
 
 APP_SRCS := \
 	shell.hs \
@@ -39,10 +39,10 @@ apps: $(APP_OUTS)
 $(APP_OBJS): $(BIN)/app/%.o: $(APP)/%.hs
 	ghc $^ -outputdir $(BIN)/app -c -o $@
 $(LIB_OBJS): $(BIN)/%.o: $(LIB)/%.hs
-	ghc $^ -outputdir $(BIN)
+	ghc $^ -threaded -outputdir $(BIN)
 
 $(BIN)/hs_lib.a: $(LIB_OBJS)
-	ghc -no-hs-main -staticlib $^ -o $@
+	ghc -no-hs-main -threaded -staticlib $^ -o $@
 
 $(GUEST_OBJS): $(BIN)/%.o: $(GUEST)/%.cpp $(BIN)/hs_lib.a
 	g++ $(CXXFLAGS) -I$(BIN)/ -c $< -o $@

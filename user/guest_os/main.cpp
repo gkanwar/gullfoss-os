@@ -69,9 +69,7 @@ bool link_shader_prog(GLuint shader_prog, GLuint vert_shader, GLuint frag_shader
 }
 
 int main(int argc, char** argv) {
-  // FORNOW: test Haskell entry point
   hs_init(&argc, &argv);
-  entry();
   
   if (!glfwInit()) return 1;
 
@@ -159,6 +157,8 @@ int main(int argc, char** argv) {
                GL_UNSIGNED_INT_8_8_8_8, buf);
   glBindTexture(GL_TEXTURE_2D, 0);
 
+  // give Wayland the buffer
+  HsStablePtr wayland_handle = waylandStartThread(WIDTH, HEIGHT);
 
   auto last_frame = hr_clock::now();
   unsigned ind = 0;
@@ -166,15 +166,10 @@ int main(int argc, char** argv) {
     auto now = hr_clock::now();
     if ((now - last_frame) >= 16ms) {
       last_frame = now;
-      // blit in damage
-      // TODO: real damage
-      auto y = ind / WIDTH;
-      auto x = ind % WIDTH;
-      buf[ind] = {.a = 0xff, .b = 0xff, .g = 0xff, .r = 0xff};
+      uint8_t* new_screen = (uint8_t*)waylandGetScreen(wayland_handle);
+      // blit in damage (TODO: smart blit?)
       glBindTexture(GL_TEXTURE_2D, tex);
-      glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, 1, 1, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, &buf[ind]);
-      ++ind;
-      // render
+      glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, WIDTH, HEIGHT, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, new_screen);
       glUseProgram(shader_prog);
       glBindTexture(GL_TEXTURE_2D, tex);
       glBindVertexArray(vao);
@@ -182,7 +177,7 @@ int main(int argc, char** argv) {
       glfwSwapBuffers(window);
     }
     glfwPollEvents();
-    std::this_thread::sleep_for(1ms);
+    std::this_thread::sleep_for(10ms);
   }
 
   glDeleteVertexArrays(1, &vao);
