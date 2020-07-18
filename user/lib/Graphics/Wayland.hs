@@ -12,7 +12,7 @@ import qualified Data.Vector.Storable.Mutable as SM
 import Foreign
 
 -- We natively work with RGBA8 images
-type NativeImage s = PT.MutableImage s P.PixelRGBA8
+type NativeImage = PT.Image (PT.PackedRepresentation P.PixelRGBA8)
 
 makePixel :: Int -> Int -> Int -> Int -> P.PixelRGBA8
 makePixel r g b a =
@@ -21,15 +21,15 @@ makePixel r g b a =
 
 -- Compositor interacts with clients and keeps an up-to-date committed screen
 -- buffer that we can render from.
-compositorThread :: Int -> Int -> Ptr Word32 -> IO ()
-compositorThread width height ptr = do
-  fp <- (newForeignPtr_ ptr)
-  let d = SM.unsafeFromForeignPtr0 fp (width*height)
-      screen = PT.MutableImage width height d in do
-    stToIO $ P.writePixel screen 50 50 (PT.packPixel (makePixel 0xff 0xff 0xff 0xff))
-    stToIO $ P.writePixel screen 50 51 (PT.packPixel (makePixel 0xff 0xff 0xff 0xff))
+compositorThread :: NativeImage -> IO ()
+compositorThread screen = do
   CC.threadDelay 5000
-  compositorThread width height ptr
+  nextScreen <- stToIO $ do
+    mutScreen <- PT.unsafeThawImage screen
+    P.writePixel mutScreen 50 50 (PT.packPixel (makePixel 0xff 0xff 0xff 0xff))
+    P.writePixel mutScreen 50 51 (PT.packPixel (makePixel 0xff 0xff 0xff 0xff))
+    PT.unsafeFreezeImage mutScreen
+  compositorThread nextScreen
 
 -- Start the main compositor thread
 foreign export ccall waylandStart :: Int -> Int -> Ptr Word32 -> IO ()
@@ -37,8 +37,10 @@ waylandStart :: Int -> Int -> Ptr Word32 -> IO ()
 waylandStart width height ptr = do
   fp <- (newForeignPtr_ ptr)
   let d = SM.unsafeFromForeignPtr0 fp (width*height)
-      screen = PT.MutableImage width height d in
-    stToIO $ PT.fillImageWith screen (PT.packPixel (makePixel 0x08 0x08 0x08 0xff))
-  _ <- CC.forkIO (compositorThread width height ptr)
+      screen = PT.MutableImage width height d
+      initScreen = runST $ do
+        PT.fillImageWith screen (PT.packPixel (makePixel 0x08 0x08 0x08 0xff))
+        PT.unsafeFreezeImage screen
+  _ <- CC.forkIO (compositorThread initScreen)
   putStrLn "threads started!"
 
