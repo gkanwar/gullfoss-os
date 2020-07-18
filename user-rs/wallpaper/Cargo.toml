@@ -5,3 +5,6 @@ authors = ["Gurtej Kanwar <gurtejkanwar@gmail.com>"]
 edition = "2018"
 
 [dependencies]
+
+[lib]
+crate-type = ["cdylib"] # FORNOW: let's try loading in as dylib
