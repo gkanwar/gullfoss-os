@@ -1,3 +1,25 @@
+Latest
+======
+This approach is beginning to look like it will require a _lot_ of legwork. Not
+exactly surprising, but I've now confirmed this through early exploration.
+
+Specifically, retaining performance often requires relying on native libraries,
+which then break down all the nice security guarantees we would otherwise get
+from working with high-level languages where memory structures are completely
+opaque. I think there's a narrow path here where we introduce some fundamental
+native operations on memory arrays with guaranteed bounds checking, etc., upon
+which we rewrite the basic libraries we would need. This would need to
+essentially completely recreate the high-performance environment currently
+available through packages. It would also require stripping down GHC (or another
+compiler) to not support unsafe C/C++ inclusion, deal with cross-compiling all
+the runtime libraries, and so on.
+
+Putting this branch down for now, but perhaps I'll pick it up again in the
+future, given enough inspiration. Rough notes below for posterity.
+
+---
+
+
 Let's try something crazy
 =========================
 I hate the idea of writing a "gimmick-y" hobby OS, but I hate the idea of poorly
