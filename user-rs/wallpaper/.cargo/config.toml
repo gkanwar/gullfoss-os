@@ -1,2 +1,3 @@
 [build]
-rustflags = ["--cap-lints=forbid", "-Funsafe-code"]
+# TODO: need to figure out kernel linkages without this
+rustflags = ["-C", "link-args=-undefined dynamic_lookup"]  #"--cap-lints=forbid", "-Funsafe-code"]

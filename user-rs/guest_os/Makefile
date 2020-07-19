@@ -1,4 +1,4 @@
-.PHONY: all guest_os
+.PHONY: all guest_os clean
 all: guest_os
 
 BIN := bin
@@ -6,14 +6,29 @@ SRC := src
 $(shell mkdir -p $(BIN))
 
 CXXFLAGS := -std=c++17
-LDFLAGS := -ldl
+LDFLAGS := -ldl -lglfw
 
-SRCS := main.cpp
+# system-specific
+UNAME_S = $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+	CXXFLAGS += -isystem ../glad/include
+else ifeq ($(UNAME_S),Darwin)
+	LDFLAGS += -framework OpenGL
+endif
+
+
+SRCS := main.cpp \
+	graphics.cpp \
+	input_events.cpp
 OBJS := $(addprefix $(BIN)/,$(SRCS:%.cpp=%.o))
+LINK_OBJS := $(OBJS) ../glad/bin/glad.o
 
 $(OBJS): $(BIN)/%.o: $(SRC)/%.cpp
 	g++ $(CXXFLAGS) -c $^ -o $@
 
 $(BIN)/guest_os: $(OBJS)
-	g++ $(CXXFLAGS) $^ $(LDFLAGS) -o $@
+	g++ $(CXXFLAGS) $(LINK_OBJS) $(LDFLAGS) -o $@
 guest_os: $(BIN)/guest_os
+
+clean:
+	rm -r $(BIN)

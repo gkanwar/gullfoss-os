@@ -1,5 +1,5 @@
-.PHONY: all apps guest_os
-all: apps guest_os
+.PHONY: all apps guest_os glad
+all: apps guest_os glad
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
@@ -19,5 +19,7 @@ endef
 $(foreach app,$(APPS),$(eval $(call APP_TARGET,$(app))))
 
 apps: $(APP_OUTS)
-guest_os:
+guest_os: glad
 	cd guest_os && $(MAKE)
+glad:
+	cd glad && $(MAKE)
