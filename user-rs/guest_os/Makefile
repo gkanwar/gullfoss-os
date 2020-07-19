@@ -17,9 +17,11 @@ else ifeq ($(UNAME_S),Darwin)
 endif
 
 
+HDRS := $(wildcard $(SRC)/*.h) # TODO: gcc deps
 SRCS := main.cpp \
 	graphics.cpp \
-	input_events.cpp
+	input_events.cpp \
+	process.cpp
 OBJS := $(addprefix $(BIN)/,$(SRCS:%.cpp=%.o))
 LINK_OBJS := $(OBJS) ../glad/bin/glad.o
 

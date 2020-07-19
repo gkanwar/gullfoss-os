@@ -1,11 +1,11 @@
 #include <chrono>
-#include <dlfcn.h>
 #include <iostream>
-#include <thread>
+#include <vector>
 
 #include "gl_generic.h"
 #include "graphics.h"
 #include "input_events.h"
+#include "process.h"
 
 #define WIDTH 800
 #define HEIGHT 600
@@ -43,26 +43,38 @@ void term_glfw() {
   glfwTerminate();
 }
 
+static std::vector<Process*> user_procs;
+
+// Some set of "syscalls" available to user-mode programs
+// TODO: move this out into a formal interface
+void spawn(const char* path) {
+  std::cout << "TODO spawn " << path << std::endl;
+}
+
+
 int main(int argc, char** argv) {
   if (argc < 2) {
     std::cout << "Usage: " << argv[0] << " <main_prog>" << std::endl;
     return 1;
   }
-  const char* main_dylib = argv[1];
-  void* handle = dlopen(main_dylib, RTLD_LAZY | RTLD_GLOBAL);
-  void (*entry)(pixel_t*,uint,uint) = (void (*)(pixel_t*,uint,uint)) dlsym(handle, "main");
+  const char* main_path = argv[1];
 
   GLFWwindow* window;
   int width, height;
   int ret = init_glfw(window, width, height);
-  if (ret) return ret;
+  if (ret != 0) return ret;
 
-  {
+  do {
     Graphics graphics(width, height);
     InputEvents input_events;
 
-    // start up user-mode entry
-    std::thread user_main(entry, graphics.buffer, width, height);
+    // start up user-mode entry program
+    user_procs.push_back(new Process(main_path));
+    if (!*user_procs.back()) {
+      std::cout << "Main process failed to load" << std::endl;
+      break;
+    }
+    user_procs.back()->start();
 
     auto last_frame = hr_clock::now();
     while (!glfwWindowShouldClose(window)) {
@@ -78,8 +90,14 @@ int main(int argc, char** argv) {
       glfwPollEvents();
     }
 
-    user_main.join();
-  }
+    for (const Process* p : user_procs) {
+      p->send_signal(Signal::INT);
+    }
+    for (Process* p : user_procs) {
+      p->join();
+      delete p;
+    }
+  } while (false);
 
   term_glfw();
   return 0;

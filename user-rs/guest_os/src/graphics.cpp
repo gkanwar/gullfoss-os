@@ -161,3 +161,14 @@ void Graphics::blit(
                   GL_RGBA, GL_UNSIGNED_BYTE, buffer); 
   glBindTexture(GL_TEXTURE_2D, 0);
 }
+
+
+extern "C" {
+  framebuffer_t get_framebuffer() {
+    return {
+      .pixels = Graphics::get().buffer,
+      .width = Graphics::get().width,
+      .height = Graphics::get().height,
+    };
+  }
+}

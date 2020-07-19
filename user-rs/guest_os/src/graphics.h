@@ -20,11 +20,18 @@ class Graphics {
   void draw() const;
   void blit(unsigned, unsigned, unsigned, unsigned) const;
   pixel_t* buffer;
+  unsigned width, height;
  private:
   // framebuffer is maintained as a GL texture, and drawn using a simple quad
   // with texture shader
   GLuint fb_tex;
   GLuint vert_arr_obj, vert_buf_obj;
   GLuint shader_prog;
-  unsigned width, height;
 };
+
+struct framebuffer_t {
+  pixel_t* pixels;
+  unsigned width, height;
+} __attribute((packed));
+
+extern "C" framebuffer_t get_framebuffer();

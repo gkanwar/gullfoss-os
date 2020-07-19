@@ -1,5 +1,7 @@
 // Interface to graphics "driver"
 
+use cty::{c_uint};
+
 #[repr(C,packed)]
 #[derive(std::clone::Clone)]
 pub struct Pixel {
@@ -7,4 +9,11 @@ pub struct Pixel {
   pub g: u8,
   pub b: u8,
   pub a: u8,
+}
+
+#[repr(C,packed)]
+pub struct Framebuffer {
+  pub pixels: *mut Pixel,
+  pub width: c_uint,
+  pub height: c_uint,
 }
