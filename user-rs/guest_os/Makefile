@@ -6,7 +6,7 @@ SRC := src
 $(shell mkdir -p $(BIN))
 
 CXXFLAGS := -std=c++17
-LDFLAGS := -ldl -lglfw
+LDFLAGS := -rdynamic -ldl -lglfw -lpthread
 
 # system-specific
 UNAME_S = $(shell uname -s)

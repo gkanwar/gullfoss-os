@@ -1,16 +1,22 @@
 #include <cassert>
 #include <dlfcn.h>
+#include <iostream>
 #include "process.h"
 
 Process::Process(const char* path) {
   handle = dlopen(path, RTLD_LAZY | RTLD_GLOBAL);
-  if (!handle) return;
+  if (!handle) {
+    std::cerr << "dlopen failed: " << dlerror() << std::endl;
+    return;
+  }
   entry = (void (*)(void)) dlsym(handle, "main");
   signal = (void (*)(Signal)) dlsym(handle, "handle_signal");
 }
 
 Process::~Process() {
-  dlclose(handle);
+  if (handle) {
+    dlclose(handle);
+  }
 }
 
 void Process::start() {
