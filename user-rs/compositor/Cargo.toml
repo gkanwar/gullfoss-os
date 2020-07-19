@@ -1,0 +1,12 @@
+[package]
+name = "compositor"
+version = "0.1.0"
+authors = ["Gurtej Kanwar <gurtejkanwar@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+cty = "0.2.0"
+kernel = { path = "../libkernel" }
+
+[lib]
+crate-type = ["cdylib"] # FORNOW: let's try loading in as dylib

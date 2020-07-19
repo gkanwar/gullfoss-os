@@ -15,7 +15,7 @@ endif
 $(info DYLIB_EXT $(DYLIB_EXT))
 
 # per-app targets
-APPS := wallpaper
+APPS := wallpaper compositor
 APP_OUTS := $(addprefix $(BIN)/apps/,$(APPS))
 define APP_TARGET
 $(CARGO_TARGET)/debug/lib$(app).$(DYLIB_EXT): $(app)/src/* $(app)/Cargo.toml

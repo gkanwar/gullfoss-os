@@ -47,8 +47,20 @@ static std::vector<Process*> user_procs;
 
 // Some set of "syscalls" available to user-mode programs
 // TODO: move this out into a formal interface
-void spawn(const char* path) {
-  std::cout << "TODO spawn " << path << std::endl;
+extern "C" void spawn(const char* path, size_t path_len) {
+  char* path_cstr = new char[path_len+1];
+  memcpy(path_cstr, path, path_len);
+  path_cstr[path_len] = '\0';
+  Process* p = new Process(path_cstr);
+  if (!*p) {
+    std::cout << "Failed to start app: " << path << std::endl;
+    delete p;
+  }
+  else {
+    user_procs.push_back(p);
+    p->start();
+  }
+  delete[] path_cstr;
 }
 
 
@@ -72,6 +84,7 @@ int main(int argc, char** argv) {
     user_procs.push_back(new Process(main_path));
     if (!*user_procs.back()) {
       std::cout << "Main process failed to load" << std::endl;
+      delete user_procs.back();
       break;
     }
     user_procs.back()->start();

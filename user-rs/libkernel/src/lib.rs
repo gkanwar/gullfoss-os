@@ -2,7 +2,7 @@ pub mod graphics;
 
 // Interface to kernel "syscalls"
 
-use cty::{c_char};
+use cty::{size_t};
 
 #[repr(C)]
 #[derive(std::fmt::Debug)]
@@ -11,5 +11,5 @@ pub enum Signal {
 }
 
 extern "C" {
-  pub fn spawn(path: *const c_char) -> ();
+  pub fn spawn(path: *const u8, path_len: size_t) -> ();
 }
