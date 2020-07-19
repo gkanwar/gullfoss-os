@@ -89,16 +89,22 @@ int main(int argc, char** argv) {
     }
     user_procs.back()->start();
 
+    auto last_fps_check = hr_clock::now();
     auto last_frame = hr_clock::now();
+    int n_frames = 0;
     while (!glfwWindowShouldClose(window)) {
       auto now = hr_clock::now();
       if ((now - last_frame) >= 16ms) {
-        std::cout << "frame! ("
-                  << std::chrono::duration_cast<ms>(now-last_frame).count()
-                  << "ms)" << std::endl;
         last_frame = now;
         graphics.draw();
         glfwSwapBuffers(window);
+        n_frames++;
+      }
+      if ((now - last_fps_check) >= 1s) {
+        double fps = 1000 * n_frames / (double) std::chrono::duration_cast<ms>(now-last_fps_check).count();
+        std::cout << "FPS = " << fps << std::endl;
+        n_frames = 0;
+        last_fps_check = now;
       }
       glfwPollEvents();
     }
