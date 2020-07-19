@@ -17,3 +17,7 @@ pub struct Framebuffer {
   pub width: c_uint,
   pub height: c_uint,
 }
+
+extern "C" {
+  pub fn get_framebuffer() -> Framebuffer;
+}
