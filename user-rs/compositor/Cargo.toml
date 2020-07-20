@@ -8,5 +8,8 @@ edition = "2018"
 cty = "0.2.0"
 kernel = { path = "../libkernel" }
 
-[lib]
-crate-type = ["cdylib"] # FORNOW: let's try loading in as dylib
+# [lib]
+# crate-type = ["cdylib"] # FORNOW: let's try loading in as dylib
+
+[[bin]]
+name = "compositor"

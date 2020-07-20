@@ -1,15 +1,18 @@
+#![no_std]
+#![no_main]
+
 extern crate kernel;
 use kernel::{Signal};
 // use kernel::graphics;
 // use kernel::graphics::{Framebuffer};
-// use std::{slice};
-use std::sync::atomic::{AtomicBool,Ordering};
+// use core::{slice};
+use core::sync::atomic::{AtomicBool,Ordering};
 
 static SHOULD_QUIT: AtomicBool = AtomicBool::new(false);
 
 #[no_mangle]
-pub extern "C" fn main() -> () {
-  println!("Hello, compositor!");
+pub extern "C" fn _start() -> ! {
+  // println!("Hello, compositor!");
 
   let app_name = "bin/apps/wallpaper";
   unsafe {
@@ -29,12 +32,15 @@ pub extern "C" fn main() -> () {
     //   pix.b = lum;
     // }
     // lum = lum.checked_sub(1).unwrap_or(0xff);
-    std::thread::yield_now();
+    // std::thread::yield_now();
+    unsafe { kernel::r#yield(); }
   }
+  unsafe { kernel::exit(0); }
 }
 
+// TODO: need to register signal handlers instead of looking for magic names
 #[no_mangle]
-pub extern "C" fn handle_signal(s: Signal) -> () {
-  println!("Got signal: {:?}, quitting!", s);
+pub extern "C" fn handle_signal(_s: Signal) -> () {
+  // println!("Got signal: {:?}, quitting!", s);
   SHOULD_QUIT.store(true, Ordering::Relaxed);
 }

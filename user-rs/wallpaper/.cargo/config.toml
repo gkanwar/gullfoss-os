@@ -1,3 +1,4 @@
 [build]
 # TODO: need to figure out kernel linkages without this
-rustflags = []  #"--cap-lints=forbid", "-Funsafe-code"]
+# Also this flag is particularly dangerous...
+rustflags = ["-C", "link-args=--warn-unresolved-symbols"] #"--cap-lints=forbid", "-Funsafe-code"]

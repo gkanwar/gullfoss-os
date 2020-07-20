@@ -8,5 +8,5 @@ edition = "2018"
 cty = "0.2.0"
 
 [lib]
-crate-type = ["rlib"]
 name = "kernel"
+crate-type = ["rlib"]

@@ -3,7 +3,7 @@
 use cty::{c_uint};
 
 #[repr(C,packed)]
-#[derive(std::clone::Clone)]
+#[derive(core::clone::Clone)]
 pub struct Pixel {
   pub r: u8,
   pub g: u8,

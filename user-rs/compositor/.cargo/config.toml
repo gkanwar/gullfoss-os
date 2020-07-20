@@ -1,5 +1,4 @@
 [build]
-# TODO: figure out unsafe code flags
-rustflags = []  #"--cap-lints=forbid", "-Funsafe-code"]
-# May need this for kernel linkage in the future
-# "-C", "link-args=-undefined dynamic_lookup"
+# TODO: need to figure out kernel linkages without this
+# Also this flag is particularly dangerous...
+rustflags = ["-C", "link-args=--warn-unresolved-symbols"] #"--cap-lints=forbid", "-Funsafe-code"]

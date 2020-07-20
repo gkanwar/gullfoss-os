@@ -3,6 +3,7 @@ all: apps guest_os
 
 BIN := bin
 CARGO_TARGET := app_target
+CROSS_TARGET := $(CARGO_TARGET)/x86_64-unknown-none/debug
 $(shell mkdir -p $(BIN)/apps)
 
 # host-specific variables
@@ -18,9 +19,9 @@ $(info DYLIB_EXT $(DYLIB_EXT))
 APPS := wallpaper compositor
 APP_OUTS := $(addprefix $(BIN)/apps/,$(APPS))
 define APP_TARGET
-$(CARGO_TARGET)/debug/lib$(app).$(DYLIB_EXT): $(app)/src/* $(app)/Cargo.toml
+$(CROSS_TARGET)/$(app): $(app)/src/* $(app)/Cargo.toml
 	cd $(app) && cargo build
-$(BIN)/apps/$(app): $(CARGO_TARGET)/debug/lib$(app).$(DYLIB_EXT)
+$(BIN)/apps/$(app): $(CROSS_TARGET)/$(app)
 	cp $$^ $$@
 endef
 $(foreach app,$(APPS),$(eval $(call APP_TARGET,$(app))))
