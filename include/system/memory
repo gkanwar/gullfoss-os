@@ -1,0 +1,52 @@
+#ifndef MEMORY_H
+#define MEMORY_H
+
+/**
+ * Schematically similar to <memory> from libstdc++.
+ */
+
+template<typename T>
+class UniquePtr {
+ public:
+  // empty constructor
+  UniquePtr() : ptr(nullptr) {};
+  // move constructor
+  UniquePtr(UniquePtr&& u) : ptr(u.release()) {}
+  // explicit constructor
+  explicit UniquePtr(T* ptr) : ptr(ptr) {}
+  ~UniquePtr() {
+    if (ptr) {
+      delete ptr;
+    }
+  }
+  T* get() { return ptr; }
+  const T* get() const { return ptr; }
+  T* release() {
+    T* out = ptr;
+    ptr = nullptr;
+    return out;
+  }
+ private:
+  T* ptr;
+};
+
+namespace std {
+
+// Thanks to: <SO>/questions/7510182/how-does-stdmove-transfer-values-into-rvalues
+template<typename _Tp>
+struct remove_reference { typedef _Tp   type; };
+
+template<typename _Tp>
+struct remove_reference<_Tp&> { typedef _Tp   type; };
+
+template<typename _Tp>
+struct remove_reference<_Tp&&> { typedef _Tp   type; };
+
+template <typename T>
+typename remove_reference<T>::type&& move(T&& arg) {
+  return static_cast<typename remove_reference<T>::type&&>(arg);
+}
+
+}
+
+#endif

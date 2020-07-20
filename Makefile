@@ -50,6 +50,7 @@ endif
 
 KERNEL_SRCS = \
 	debug_serial.cpp \
+	elf_loader.cpp \
 	heap_allocator.cpp \
 	interrupt_impl.cpp \
 	interrupt_manager.cpp \
