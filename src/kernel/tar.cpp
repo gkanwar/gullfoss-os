@@ -21,18 +21,21 @@ static const FileHeader* step_forward(const FileHeader* header, void* end_buffer
   return header;
 }
 
-const void* Tarball::find_file(const char* name) const {
+tar_file_t Tarball::find_file(const char* name) {
   debug::serial_printf("Finding file...\n");
   const FileHeader* header = (const FileHeader*)buffer;
   void* end_buffer = (void*)((uint8_t*)buffer + size);
   do {
     debug::serial_printf("Checking entry with filename %s\n", header->name);
     if (std::strcmp((const char*)header->name, name) == 0) {
-      return (void*)(header + 1); // data is just past (padded) header
+      return {
+        .buffer = (uint8_t*)(header + 1), // data is just past (padded) header
+        .size = (size_t)std::strtol((const char*)header->size, nullptr, 8)
+      };
     }
     debug::serial_printf("Skipping forward (size = %llu)\n",
                          std::strtol((const char*)header->size, nullptr, 8));
     header = step_forward(header, end_buffer);
   } while(header);
-  return nullptr;
+  return { .buffer = nullptr, .size = 0 };
 }

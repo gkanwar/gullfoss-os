@@ -18,14 +18,14 @@ class BlockSource {
 
 class InMemorySource : public BlockSource {
  public:
-  InMemorySource(UniquePtr<uint8_t*> src, size_t size)
-      : buffer(std::move(src)), buffer_size(size) {}
+  InMemorySource(const uint8_t* src, size_t size)
+      : src(src), buffer_size(size) {}
   void read_block(size_t offset, size_t len, uint8_t* dest) {
-    std::memcpy(dest, buffer.get() + offset, len);
+    std::memcpy(dest, src + offset, len);
   }
   size_t size() const { return buffer_size; }
  private:
-  UniquePtr<uint8_t*> buffer;
+  const uint8_t* src;
   size_t buffer_size;
 };
 

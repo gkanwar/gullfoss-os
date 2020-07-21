@@ -18,6 +18,7 @@
 #include "assert.h"
 #include "bootboot.h"
 #include "debug_serial.h"
+#include "elf_loader.h"
 #include "framebuffer.h"
 #include "heap_allocator.h"
 #include "interrupt_manager.h"
@@ -49,7 +50,7 @@ struct BitmapHeader {
   uint32_t data_offset;
 } __attribute__((packed));
 
-void show_splash(const BOOTBOOT& info, pixel_t framebuffer[], const Tarball& initrd) {
+void show_splash(const BOOTBOOT& info, pixel_t framebuffer[], Tarball& initrd) {
   if (info.fb_type != FB_ARGB) {
     // TODO: pixel reordering
     // FORNOW: splash a constant color
@@ -68,13 +69,13 @@ void show_splash(const BOOTBOOT& info, pixel_t framebuffer[], const Tarball& ini
 
   // Normal splash display (FB_ARGB, matching bitmap file format)
   debug::serial_printf("Framebuffer format is good, loading bitmap\n");
-  const void* splash_file = initrd.find_file("waterfall.bmp");
-  if (!splash_file) {
+  tar_file_t splash_file = initrd.find_file("waterfall.bmp");
+  if (!splash_file.buffer) {
     debug::serial_printf("Failed to find splash file\n");
     return;
   }
-  debug::serial_printf("Found splash file %p\n", splash_file);
-  const BitmapHeader* splash_header = (const BitmapHeader*)splash_file;
+  debug::serial_printf("Found splash file %p\n", splash_file.buffer);
+  const BitmapHeader* splash_header = (const BitmapHeader*)splash_file.buffer;
   if (splash_header->magic[0] != 'B' ||
       splash_header->magic[1] != 'M') {
     debug::serial_printf("Corrupt splash file\n");
@@ -82,7 +83,7 @@ void show_splash(const BOOTBOOT& info, pixel_t framebuffer[], const Tarball& ini
   }
   debug::serial_printf("Showing splash into %p\n", framebuffer);
   const pixel_t* pixel_data = (const pixel_t*)
-      ((const uint8_t*)splash_file + splash_header->data_offset);
+      ((const uint8_t*)splash_file.buffer + splash_header->data_offset);
   const size_t width = 800, height = 600;
   for (unsigned row = 0; row < height; ++row) {
     const pixel_t* row_data = pixel_data + (height-row-1)*width; // bitmap stores bottom up
@@ -92,7 +93,7 @@ void show_splash(const BOOTBOOT& info, pixel_t framebuffer[], const Tarball& ini
 }
 
 int kernel_early_main(const BOOTBOOT& info, pixel_t framebuffer[]) {
-  Tarball initrd((const void*)info.initrd_ptr, info.initrd_size);
+  Tarball initrd((void*)info.initrd_ptr, info.initrd_size);
   show_splash(info, framebuffer, initrd);
 
   const MMapEnt* mmap = &info.mmap;
@@ -120,16 +121,29 @@ extern "C" {
   debug::serial_printf("BOOTBOOT info %p\n", &info);
   debug::serial_printf("...fb_size = %llu, (%llu x %llu)\n", info.fb_size,
                        info.fb_width, info.fb_height);
-  Tarball initrd((const void*)info.initrd_ptr, info.initrd_size);
-  const uint8_t* psf_buffer = (const uint8_t*)
-      initrd.find_file("texgyrecursor-regular.psf");
-  PSFFont font(psf_buffer);
+  Tarball initrd((void*)info.initrd_ptr, info.initrd_size);
+  tar_file_t psf = initrd.find_file("texgyrecursor-regular.psf");
+  assert(psf.buffer, "PSF not found for shell");
+  PSFFont font(psf.buffer);
   USKeyMap key_map;
   Framebuffer fb(framebuffer, info.fb_size, info.fb_height, info.fb_width, info.fb_scanline);
   FBTerminal term(&fb, font);
   app::Shell shell(key_map, term);
   KeyboardState::get().set_subscriber(shell);
   shell.main();
+  ASSERT_NOT_REACHED;
+}
+
+[[noreturn]] void elf_user_task() {
+  debug::serial_printf("elf_user_task start\n");
+  const BOOTBOOT& info = _bootboot;
+  debug::serial_printf("BOOTBOOT info %p\n", &info);
+  Tarball initrd((void*)info.initrd_ptr, info.initrd_size);
+  tar_file_t user_elf = initrd.find_file("apps/wallpaper");
+  assert(user_elf.buffer, "User ELF apps/wallpaper not found");
+  ELFLoader elf_loader(UniquePtr<BlockSource>(new InMemorySource(
+      (const uint8_t*)user_elf.buffer, user_elf.size)));
+  // TODO: allocate proc memory, load sections from ELF into mem
   ASSERT_NOT_REACHED;
 }
 
@@ -185,7 +199,9 @@ void kernel_main()
   InterruptManager::get().toggle_irq(PICMask1::PITimer, true);
 
   // Fire Stage 2 booting (for now, just run "shell")
-  TaskManager::get().start(shell_task);
+  // TaskManager::get().start(shell_task);
+  // FORNOW: attempt to load user-space ELF exe
+  TaskManager::get().start(elf_user_task);
 
   // Kernel idle loop (maybe we should nuke this task?)
   while (true) { asm volatile("hlt"::); }

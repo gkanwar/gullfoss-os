@@ -1,6 +1,11 @@
 #ifndef HEAP_ALLOCATOR_H
 #define HEAP_ALLOCATOR_H
 
+/**
+ * Kernel heap allocator. NOT for use in spooling up user-space programs.
+ * FIXME: HeapAllocator is not thread-safe.
+ */
+
 #include <stddef.h>
 #include "phys_mem_allocator.h"
 #include "virt_mem_allocator.h"

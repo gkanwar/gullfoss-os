@@ -2,6 +2,7 @@ BIN := bin
 SRC := src
 INCLUDE := include
 PROJ_NAME := gullfoss
+USER := user-rs
 
 CROSSBIN := $(HOME)/opt/cross64/bin
 AS := $(CROSSBIN)/x86_64-elf-as
@@ -28,7 +29,7 @@ else
 
 # make sure output dirs exist
 TBIN := $(BIN)/$(TARGET)
-$(shell mkdir -p $(TBIN)/initrd/boot)
+$(shell mkdir -p $(TBIN)/initrd)
 $(shell mkdir -p $(TBIN)/kernel)
 $(shell mkdir -p $(TBIN)/system)
 
@@ -107,13 +108,20 @@ $(TBIN)/system/%.o: $(SRC)/system/%.cpp
 $(TBIN)/kernel/interrupt_impl.o: CXXFLAGS := $(CXXFLAGS) -mgeneral-regs-only
 
 INITRD_FILES := \
-	boot/sys/config \
-	boot/waterfall.bmp \
-	boot/texgyrecursor-regular.psf
+	sys/config \
+	waterfall.bmp \
+	texgyrecursor-regular.psf
 INITRD_OUT_FILES := $(addprefix $(TBIN)/initrd/,$(INITRD_FILES))
 
+INITRD_APP_FILES := \
+	apps/wallpaper
+INITRD_APP_OUT_FILES := $(addprefix $(TBIN)/initrd/,$(INITRD_APP_FILES))
+
 # copy initrd files
-$(TBIN)/initrd/%: $(SRC)/%
+$(INITRD_OUT_FILES): $(TBIN)/initrd/%: $(SRC)/boot/%
+	mkdir -p `dirname $@`
+	cp $< $@
+$(INITRD_APP_OUT_FILES): $(TBIN)/initrd/%: $(USER)/bin/%
 	mkdir -p `dirname $@`
 	cp $< $@
 
@@ -123,8 +131,8 @@ $(KERNEL_OUT): $(OBJS) kernel.ld
 	$(CXX) -T kernel.ld -o $@ $(CXXFLAGS) $(LINK_LIST)
 kernel: $(KERNEL_OUT)
 
-initrd: $(KERNEL_OUT) $(INITRD_OUT_FILES)
-	cp $(KERNEL_OUT) $(TBIN)/initrd/boot/
+initrd: $(KERNEL_OUT) $(INITRD_OUT_FILES) $(INITRD_APP_OUT_FILES)
+	cp $(KERNEL_OUT) $(TBIN)/initrd/
 
 # configure bootboot
 $(TBIN)/bootboot.json: $(SRC)/boot/bootboot.template.json

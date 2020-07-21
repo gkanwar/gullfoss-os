@@ -5,6 +5,11 @@
 #include <stddef.h>
 #include <stdint.h>
 
+struct tar_file_t {
+  uint8_t* buffer; // nullptr indicates file not found
+  size_t size;
+};
+
 /**
  * Small tar reader class, primarily used in parsing initrd.
  */
@@ -26,7 +31,7 @@ class Tarball {
   };
   Tarball(const void* buffer, size_t size) : buffer(buffer), size(size) {}
   // Return pointer to file matching name or nullptr
-  const void* find_file(const char* name) const;
+  tar_file_t find_file(const char* name);
  private:
   const void* buffer;
   size_t size;
