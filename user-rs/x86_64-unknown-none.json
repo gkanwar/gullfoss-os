@@ -8,6 +8,7 @@
   "os": "none",
   "is-like-osx": false,
   "executables": true,
+  "position-independent-executables": true,
   "linker-flavor": "ld",
   "panic-strategy": "abort",
   "disable-redzone": true,
