@@ -60,6 +60,7 @@ KERNEL_SRCS = \
 	memory.cpp \
 	panic.cpp \
 	phys_mem_allocator.cpp \
+	proc_allocator.cpp \
 	psffont.cpp \
 	shell.cpp \
 	tar.cpp \

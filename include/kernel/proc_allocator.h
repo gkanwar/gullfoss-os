@@ -25,26 +25,10 @@ class ProcAllocator {
  public:
   ProcAllocator(PhysMemAllocator&, VirtMemAllocator&);
   static ProcAllocator& get();
-  void* malloc(size_t);
-  union ProcBlock;
-  ProcBlock* proc;
+  void* alloc_proc_segments(size_t image_size);
  private:
-  void* slab8_malloc();
-  void* slab16_malloc();
-  void* slab32_malloc();
-  void* block_malloc(size_t);
-  void* phys_proc_chunks[PROC_PAGES / 32];
-  // Avoid really tiny mallocs hitting the main proc, using "slab"
-  // suballocators for primitive small types. Each suballoc is given one chunk.
-  struct Slab8 { uint8_t data[8]; };
-  struct Slab16 { uint8_t data[16]; };
-  struct Slab32 { uint8_t data[32]; };
-  Slab8* slab8;
-  Slab16* slab16;
-  Slab32* slab32;
-  uint8_t slab8_bitmap[PAGE_SIZE * CHUNK_PAGES / (sizeof(Slab8)*8)];
-  uint8_t slab16_bitmap[PAGE_SIZE * CHUNK_PAGES / (sizeof(Slab16)*8)];
-  uint8_t slab32_bitmap[PAGE_SIZE * CHUNK_PAGES / (sizeof(Slab32)*8)];
+  PhysMemAllocator& physMemAlloc;
+  VirtMemAllocator& virtMemAlloc;
 };
 
 #endif

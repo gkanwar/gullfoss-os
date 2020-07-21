@@ -141,8 +141,21 @@ extern "C" {
   Tarball initrd((void*)info.initrd_ptr, info.initrd_size);
   tar_file_t user_elf = initrd.find_file("apps/wallpaper");
   assert(user_elf.buffer, "User ELF apps/wallpaper not found");
-  ELFLoader elf_loader(UniquePtr<BlockSource>(new InMemorySource(
-      (const uint8_t*)user_elf.buffer, user_elf.size)));
+  // ELFLoader elf_loader(UniquePtr<BlockSource>(new InMemorySource(
+  //     (const uint8_t*)user_elf.buffer, user_elf.size)));
+  ELFLoader elf_loader((const uint8_t*)user_elf.buffer);
+  debug::serial_printf("First 4 chars of ELF: %c %c %c %c\n",
+                       user_elf.buffer[0], user_elf.buffer[1],
+                       user_elf.buffer[2], user_elf.buffer[3]);
+  ELFLoader::Status ret = elf_loader.parse_header();
+  if (ret != ELFLoader::Status::SUCCESS) {
+    debug::serial_printf("Failed to parse ELF header: %d\n", ret);
+  }
+  ProcAllocator alloc(PhysMemAllocator::get(), VirtMemAllocator::get());
+  ret = elf_loader.load_process_image(alloc);
+  if (ret != ELFLoader::Status::SUCCESS) {
+    debug::serial_printf("Failed to load ELF: %d\n", ret);
+  }
   // TODO: allocate proc memory, load sections from ELF into mem
   ASSERT_NOT_REACHED;
 }

@@ -19,4 +19,17 @@
 // "Pretty"-print our panic message and halt
 [[noreturn]] void panic(const char* msg);
 
+// Generic singleton constuctor and fetcher
+template <typename T>
+void assert_make_inst(T* &inst, T* _this) {
+  assert(!inst, "Cannot constructor multiple singleton instances");
+  inst = _this;
+}
+template <typename T>
+T& assert_get_inst(T* inst) {
+  assert(inst, "Cannot get unconstructed singleton");
+  return *inst;
+}
+
+
 #endif
