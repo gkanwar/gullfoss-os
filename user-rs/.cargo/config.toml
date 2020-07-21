@@ -9,3 +9,6 @@ panic = "abort" # no unwinding info
 
 [unstable]
 build-std = ["core", "compiler_builtins"]
+
+[target.x86_64-unknown-none]
+linker = "../../opt/cross64/bin/x86_64-elf-ld"
