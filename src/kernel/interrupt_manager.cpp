@@ -1,6 +1,7 @@
 #include <cstring>
 #include <stdint.h>
 
+#include "assert.h"
 #include "debug_serial.h"
 #include "interrupt_impl.h"
 #include "interrupt_manager.h"
@@ -11,10 +12,10 @@
 static InterruptManager* inst;
 
 InterruptManager::InterruptManager() {
-  inst = this;
+  assert_make_inst(inst, this);
   load_idt();
 }
-InterruptManager& InterruptManager::get() { return *inst; }
+InterruptManager& InterruptManager::get() { return assert_get_inst(inst); }
 
 static inline InterruptGate make_interrupt_gate(uint64_t f) {
   uint64_t offset = (uint64_t)f;

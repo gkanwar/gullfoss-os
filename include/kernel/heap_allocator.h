@@ -6,28 +6,29 @@
  * FIXME: HeapAllocator is not thread-safe.
  */
 
+#include <memory>
 #include <stddef.h>
+#include "linked_block_allocator.h"
 #include "phys_mem_allocator.h"
 #include "virt_mem_allocator.h"
 
-#define CHUNK_PAGES 32
 #define HEAP_PAGES NUM_PT_ENTRIES // 2MiB heap
 
 class HeapAllocator {
+  static constexpr auto CHUNK_PAGES = PhysMemAllocator::NUM_PAGES_BIG;
  public:
   HeapAllocator();
   static HeapAllocator& get();
   // NOTE: We need initialize code for kernel_early_main (prior to ctors)
   void initialize(PhysMemAllocator&, VirtMemAllocator&);
-  void* malloc(size_t);
-  union HeapBlock;
-  HeapBlock* heap;
+  void* malloc(lsize_t);
  private:
   void* slab8_malloc();
   void* slab16_malloc();
   void* slab32_malloc();
-  void* block_malloc(size_t);
-  void* phys_heap_chunks[HEAP_PAGES / 32];
+  void* block_malloc(lsize_t);
+  void* phys_heap_chunks[HEAP_PAGES / CHUNK_PAGES];
+  LinkedBlockAllocator linked_block_alloc;
   // Avoid really tiny mallocs hitting the main heap, using "slab"
   // suballocators for primitive small types. Each suballoc is given one chunk.
   struct Slab8 { uint8_t data[8]; };

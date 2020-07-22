@@ -30,6 +30,8 @@ union PageTableEntry {
 #  error "only PML4 supported"
 #endif
 
+constexpr uint64_t RESERVE_ADDR = 0xabadbadbadbad000 & PHYS_ADDR_MASK;
+
 enum class PageTableFlags {
   Present = 0,
   ReadWrite = 1,
@@ -41,14 +43,13 @@ enum class PageTableFlags {
   PageSize = 7,
 };
 
-const unsigned num_pt_entries = 512;
 struct PageTable {
-  PageTableEntry entries[num_pt_entries];
+  PageTableEntry entries[NUM_PT_ENTRIES];
 } __attribute__((packed));
 
 // Resolve an entry to a physical address (if the entry is present) or nullptr
 static void* resolve_entry(const PageTable& table, unsigned i) {
-  assert(i < num_pt_entries, "entry index too large");
+  assert(i < NUM_PT_ENTRIES, "entry index too large");
   const PageTableEntry& entry = table.entries[i];
   if (util::get_bit(entry.flags, PageTableFlags::Present)) {
     return (void*)PTE_ADDR(entry);
@@ -56,12 +57,15 @@ static void* resolve_entry(const PageTable& table, unsigned i) {
   return nullptr;
 }
 // Add an entry to a physical address, with given extra flags (Present is automatic)
-static void add_entry(PageTable& table, unsigned i, const void* addr, uint8_t flags) {
-  assert(i < num_pt_entries, "entry index too large");
+static void set_entry(PageTable& table, unsigned i, const void* addr, uint8_t flags) {
+  assert(i < NUM_PT_ENTRIES, "entry index too large");
   PageTableEntry& entry = table.entries[i];
   entry.addr = (uint64_t)addr;
   entry.flags = flags;
-  util::set_bit(entry.flags, PageTableFlags::Present);
+}
+static void add_entry(PageTable& table, unsigned i, const void* addr, uint8_t flags) {
+  util::set_bit(flags, PageTableFlags::Present);
+  set_entry(table, i, addr, flags);
 }
 
 // TODO: when exactly do we need to flush?
@@ -70,8 +74,8 @@ static void add_entry(PageTable& table, unsigned i, const void* addr, uint8_t fl
 // }
 
 static VirtMemAllocator* inst;
-VirtMemAllocator::VirtMemAllocator() { inst = this; }
-VirtMemAllocator& VirtMemAllocator::get() { return *inst; }
+VirtMemAllocator::VirtMemAllocator() { assert_make_inst(inst, this); }
+VirtMemAllocator& VirtMemAllocator::get() { return assert_get_inst(inst); }
 
 void VirtMemAllocator::initialize(PhysMemAllocator* physMemAlloc) {
   this->physMemAlloc = physMemAlloc;
@@ -84,11 +88,11 @@ void VirtMemAllocator::clear_ident_map() {
   PANIC_NOT_IMPLEMENTED("clear_ident_map");
 }
 
-void* VirtMemAllocator::find_free_page() {
+void* VirtMemAllocator::alloc_free_page() {
   // FORNOW first pass linear scan allocator
   // scan from kernel start downwards
-  size_t page = ((size_t)&_kernel_start) & PAGE_MASK;
-  for (; page != (size_t)nullptr; page -= PAGE_SIZE) {
+  lsize_t page = ((lsize_t)&_kernel_start) & PAGE_MASK;
+  for (; page != (lsize_t)nullptr; page -= PAGE_SIZE) {
     if ((bool)page_map_status((void*)page)) {
       return (void*)page;
     }
@@ -96,17 +100,18 @@ void* VirtMemAllocator::find_free_page() {
   return nullptr;
 }
 
-void* VirtMemAllocator::find_free_block() {
+void* VirtMemAllocator::find_free_block(
+    const lsize_t block_size, PageVirtualStatus min_status) {
   // FORNOW first pass linear scan allocator
   // scan from kernel start downwards
-  size_t page = ((size_t)&_kernel_start) & PAGE_MASK;
+  lsize_t page = ((lsize_t)&_kernel_start) & PAGE_MASK;
   debug::serial_printf("find_free_block starting from %p\n",
                        &_kernel_start);
   // round down to nearest page block
-  page -= page % PAGE_BLOCK_SIZE;
-  for (; page != (size_t)nullptr; page -= PAGE_BLOCK_SIZE) {
+  page -= page % block_size;
+  for (; page != (lsize_t)nullptr; page -= block_size) {
     auto status = page_map_status((void*)page);
-    if (status >= PageVirtualStatus::PageTableMissing) {
+    if (status >= min_status) {
       debug::serial_printf("... found %p\n", page);
       return (void*)page;
     }
@@ -114,6 +119,26 @@ void* VirtMemAllocator::find_free_block() {
   return nullptr;
 }
 
+void* VirtMemAllocator::alloc_free_l1_block() {
+  void* out = find_free_block(LEVEL1_BLOCK_SIZE, PageVirtualStatus::PageTableMissing);
+  if (!out) return out;
+  reserve_entry(out, PagingLevel::PageTable);
+  return out;
+}
+
+void* VirtMemAllocator::alloc_free_l2_block() {
+  void* out = find_free_block(LEVEL2_BLOCK_SIZE, PageVirtualStatus::PageDirMissing);
+  if (!out) return out;
+  reserve_entry(out, PagingLevel::PageDir);
+  return out;
+}
+
+void* VirtMemAllocator::alloc_free_l3_block() {
+  void* out = find_free_block(LEVEL3_BLOCK_SIZE, PageVirtualStatus::PageDirPTMissing);
+  if (!out) return out;
+  reserve_entry(out, PagingLevel::PageDirPT);
+  return out;
+}
 
 #if (PAGING == PAGING_PML4)
 PageVirtualStatus VirtMemAllocator::page_map_status(void* page) {
@@ -141,23 +166,23 @@ PageVirtualStatus VirtMemAllocator::page_map_status(void* page) {
 void VirtMemAllocator::do_map_page(void* virt_page, void* phys_page) {
   assert(physMemAlloc,
          "VirtMemAllocator needs to bind a PhysMemAllocator before mapping pages");
-  debug::serial_printf("do_map_page %p -> %p\n", virt_page, phys_page);
+  // debug::serial_printf("do_map_page %p -> %p\n", virt_page, phys_page);
   uint8_t extra_flags = 0;
   uint64_t addr = (uint64_t)virt_page;
   PageTable* pml3_table = (PageTable*)resolve_entry(*pml4_table, PT4_INDEX(addr));
-  if (!pml3_table) {
+  if (!pml3_table || pml3_table == (void*)RESERVE_ADDR) {
     pml3_table = (PageTable*)physMemAlloc->alloc1();
     std::memset(pml3_table, 0, sizeof(PageTable));
     add_entry(*pml4_table, PT4_INDEX(addr), (void*)pml3_table, extra_flags);
   }
   PageTable* pml2_table = (PageTable*)resolve_entry(*pml3_table, PT3_INDEX(addr));
-  if (!pml2_table) {
+  if (!pml2_table || pml2_table == (void*)RESERVE_ADDR) {
     pml2_table = (PageTable*)physMemAlloc->alloc1();
     std::memset(pml2_table, 0, sizeof(PageTable));
     add_entry(*pml3_table, PT3_INDEX(addr), (void*)pml2_table, extra_flags);
   }
   PageTable* pml1_table = (PageTable*)resolve_entry(*pml2_table, PT2_INDEX(addr));
-  if (!pml1_table) {
+  if (!pml1_table || pml1_table == (void*)RESERVE_ADDR) {
     pml1_table = (PageTable*)physMemAlloc->alloc1();
     std::memset(pml1_table, 0, sizeof(PageTable));
     add_entry(*pml2_table, PT2_INDEX(addr), (void*)pml1_table, extra_flags);
@@ -168,16 +193,53 @@ void VirtMemAllocator::do_map_page(void* virt_page, void* phys_page) {
   add_entry(*pml1_table, PT1_INDEX(addr), phys_page, extra_flags);
 }
 
+void VirtMemAllocator::reserve_entry(void* virt_page, PagingLevel level) {
+  assert(level < PagingLevel::PageDirPT, "paging level too high for reservation");
+  uint8_t extra_flags = 0;
+  uint64_t addr = (uint64_t)virt_page;
+  PageTable* pml3_table = (PageTable*)resolve_entry(*pml4_table, PT4_INDEX(addr));
+  if (!pml3_table) {
+    pml3_table = (PageTable*)physMemAlloc->alloc1();
+    std::memset(pml3_table, 0, sizeof(PageTable));
+    add_entry(*pml4_table, PT4_INDEX(addr), (void*)pml3_table, extra_flags);
+  }
+  PageTable* pml2_table = (PageTable*)resolve_entry(*pml3_table, PT3_INDEX(addr));
+  if (level == PagingLevel::PageDir) {
+    assert(!pml2_table, "attempting to reserve already-reserved mem");
+    set_entry(*pml3_table, PT3_INDEX(addr), (void*)RESERVE_ADDR, extra_flags);
+    return;
+  }
+  else if (!pml2_table) {
+    pml2_table = (PageTable*)physMemAlloc->alloc1();
+    std::memset(pml2_table, 0, sizeof(PageTable));
+    add_entry(*pml3_table, PT3_INDEX(addr), (void*)pml2_table, extra_flags);
+  }
+  PageTable* pml1_table = (PageTable*)resolve_entry(*pml2_table, PT2_INDEX(addr));
+  if (level == PagingLevel::PageTable) {
+    assert(!pml1_table, "attempting to reserve already-reserved mem");
+    set_entry(*pml2_table, PT2_INDEX(addr), (void*)RESERVE_ADDR, extra_flags);
+    return;
+  }
+  else if (!pml1_table) {
+    pml1_table = (PageTable*)physMemAlloc->alloc1();
+    std::memset(pml1_table, 0, sizeof(PageTable));
+    add_entry(*pml2_table, PT2_INDEX(addr), (void*)pml1_table, extra_flags);
+  }
+  void* page = resolve_entry(*pml1_table, PT1_INDEX(addr));
+  assert(!page, "attempting to reserve already-reserved mem");
+  set_entry(*pml1_table, PT1_INDEX(addr), (void*)RESERVE_ADDR, extra_flags);
+}
+
 #else
 #error "only PML4 supported"
 #endif
 
 void* VirtMemAllocator::map_page(void* virt_page, void* phys_page) {
   if (!virt_page) {
-    virt_page = find_free_page();
+    virt_page = alloc_free_page();
   }
-  assert((size_t)virt_page % PAGE_SIZE == 0, "virt page must be aligned");
-  assert((size_t)phys_page % PAGE_SIZE == 0, "phys page must be aligned");
+  assert((lsize_t)virt_page % PAGE_SIZE == 0, "virt page must be aligned");
+  assert((lsize_t)phys_page % PAGE_SIZE == 0, "phys page must be aligned");
   do_map_page(virt_page, phys_page);
   return virt_page;
 }

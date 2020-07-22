@@ -35,7 +35,45 @@
 #include "virt_mem_allocator.h"
 
 // Need for purely virtual functions
-extern "C" void __cxa_pure_virtual() { ASSERT_NOT_REACHED; }
+#define ATEXIT_FUNC_MAX 128
+extern "C" {
+  void __cxa_pure_virtual() { ASSERT_NOT_REACHED; }
+
+  struct dtor_entry_t {
+    void (*dtor)(void*) = nullptr;
+    void* obj = nullptr;
+    void* dso_handle = nullptr;
+  };
+  dtor_entry_t dtor_funcs[ATEXIT_FUNC_MAX];
+  unsigned dtor_func_count = 0;
+  unsigned __cxa_atexit(void (*dtor)(void*), void* obj, void* dso_handle) {
+    if (dtor_func_count >= ATEXIT_FUNC_MAX) {
+      return -1;
+    }
+    dtor_funcs[dtor_func_count++] = {
+      .dtor = dtor, .obj = obj, .dso_handle = dso_handle
+    };
+    return 0;
+  }
+
+  void __cxa_finalize(void* f) {
+    if (f == nullptr) {
+      for (unsigned i = 0; i < dtor_func_count; ++i) {
+        if (dtor_funcs[i].dtor) {
+          (*dtor_funcs[i].dtor)(dtor_funcs[i].obj);
+        }
+      }
+    }
+    else {
+      for (unsigned i = 0; i < dtor_func_count; ++i) {
+        if (dtor_funcs[i].dtor == f) {
+          (*dtor_funcs[i].dtor)(dtor_funcs[i].obj);
+          dtor_funcs[i] = {0};
+        }
+      }
+    }
+  }
+}
 
 // PMA, VMA, HA held globally because they exist before the heap exists
 PhysMemAllocator physMemAlloc;
@@ -50,7 +88,7 @@ struct BitmapHeader {
   uint32_t data_offset;
 } __attribute__((packed));
 
-void show_splash(const BOOTBOOT& info, pixel_t framebuffer[], Tarball& initrd) {
+void show_splash(const BOOTBOOT& info, pixel_t* framebuffer, Tarball& initrd) {
   if (info.fb_type != FB_ARGB) {
     // TODO: pixel reordering
     // FORNOW: splash a constant color
@@ -84,7 +122,7 @@ void show_splash(const BOOTBOOT& info, pixel_t framebuffer[], Tarball& initrd) {
   debug::serial_printf("Showing splash into %p\n", framebuffer);
   const pixel_t* pixel_data = (const pixel_t*)
       ((const uint8_t*)splash_file.buffer + splash_header->data_offset);
-  const size_t width = 800, height = 600;
+  const lsize_t width = 800, height = 600;
   for (unsigned row = 0; row < height; ++row) {
     const pixel_t* row_data = pixel_data + (height-row-1)*width; // bitmap stores bottom up
     pixel_t* framebuffer_row_data = framebuffer + row*info.fb_scanline/sizeof(pixel_t);
@@ -92,7 +130,7 @@ void show_splash(const BOOTBOOT& info, pixel_t framebuffer[], Tarball& initrd) {
   }
 }
 
-int kernel_early_main(const BOOTBOOT& info, pixel_t framebuffer[]) {
+int kernel_early_main(const BOOTBOOT& info, pixel_t* framebuffer) {
   Tarball initrd((void*)info.initrd_ptr, info.initrd_size);
   show_splash(info, framebuffer, initrd);
 
@@ -103,7 +141,6 @@ int kernel_early_main(const BOOTBOOT& info, pixel_t framebuffer[]) {
   debug::serial_printf("init heap pages...\n");
   heapAlloc.initialize(physMemAlloc, virtMemAlloc);
   debug::serial_printf("done\n");
-  debug::serial_printf("heap ptr %p\n", heapAlloc.heap);
   return 0;
 }
 
@@ -141,7 +178,7 @@ extern "C" {
   Tarball initrd((void*)info.initrd_ptr, info.initrd_size);
   tar_file_t user_elf = initrd.find_file("apps/wallpaper");
   assert(user_elf.buffer, "User ELF apps/wallpaper not found");
-  // ELFLoader elf_loader(UniquePtr<BlockSource>(new InMemorySource(
+  // ELFLoader elf_loader(unique_ptr<BlockSource>(new InMemorySource(
   //     (const uint8_t*)user_elf.buffer, user_elf.size)));
   ELFLoader elf_loader((const uint8_t*)user_elf.buffer);
   debug::serial_printf("First 4 chars of ELF: %c %c %c %c\n",
@@ -165,6 +202,8 @@ void kernel_main()
 {
   // VirtMemAllocator::get().clear_ident_map();
   // debug::serial_printf("ident map cleared\n");
+  debug::serial_printf("LEVEL3_BLOCK_SIZE check: %llu\n", (void*)LEVEL3_BLOCK_SIZE);
+  assert(LEVEL3_BLOCK_SIZE, "LEVEL3_BLOCK_SIZE should not overflow!");
 
   new KeyboardState;
   new InterruptManager;

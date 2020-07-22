@@ -4,10 +4,11 @@
 #include <cstdlib>
 #include <stddef.h>
 #include <stdint.h>
+#include <types.h>
 
 struct tar_file_t {
   uint8_t* buffer; // nullptr indicates file not found
-  size_t size;
+  lsize_t size;
 };
 
 /**
@@ -29,12 +30,12 @@ class Tarball {
     } __attribute__((packed));
     uint8_t _pad[512];
   };
-  Tarball(const void* buffer, size_t size) : buffer(buffer), size(size) {}
+  Tarball(const void* buffer, lsize_t size) : buffer(buffer), size(size) {}
   // Return pointer to file matching name or nullptr
   tar_file_t find_file(const char* name);
  private:
   const void* buffer;
-  size_t size;
+  lsize_t size;
 };
 
 #endif

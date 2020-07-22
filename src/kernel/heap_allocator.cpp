@@ -1,39 +1,28 @@
+#include <memory>
 #include "assert.h"
-#include "heap_allocator.h"
 #include "debug_serial.h"
+#include "heap_allocator.h"
 
 static HeapAllocator* inst;
 
-HeapAllocator::HeapAllocator() { inst = this; }
-HeapAllocator& HeapAllocator::get() { return *inst; }
-
-#define HEAP_BLOCK_ALIGN 64
-union alignas(HEAP_BLOCK_ALIGN) HeapAllocator::HeapBlock {
-  struct {
-    HeapBlock* next;
-    size_t size;
-    bool allocated;
-  };
-  // header align 16
-  uint8_t align[16];
-  // data implicitly follows
-} __attribute__((packed));
+HeapAllocator::HeapAllocator() { assert_make_inst(inst, this); }
+HeapAllocator& HeapAllocator::get() { return assert_get_inst(inst); }
 
 void HeapAllocator::initialize(
     PhysMemAllocator& physMemAlloc, VirtMemAllocator& virtMemAlloc) {
-  // grab a 2MiB contiguous region of kernel virtual memory
-  assert(HEAP_PAGES == NUM_PT_ENTRIES, "heap must be one block");
-  heap = (HeapBlock*)virtMemAlloc.find_free_block();
+  // grab a contiguous region of kernel virtual memory
+  assert(HEAP_PAGES == LEVEL1_PAGES, "heap must be one L1 block");
+  void* mem = virtMemAlloc.alloc_free_l1_block();
+  assert(mem, "not enough mem for VirtMemAllocator");
 
-  assert(HEAP_PAGES % 32 == 0, "heap must be allocated in 32-page blocks");
+  assert(HEAP_PAGES % CHUNK_PAGES == 0, "heap must be allocated in 'big' chunks");
   const unsigned n_chunks = HEAP_PAGES / CHUNK_PAGES;
   for (unsigned i = 0; i < n_chunks; ++i) {
-    assert(CHUNK_PAGES == 32, "heap must be allocated in 32-page blocks");
-    phys_heap_chunks[i] = physMemAlloc.alloc32();
+    phys_heap_chunks[i] = physMemAlloc.allocBig();
     assert(phys_heap_chunks[i], "heap chunk alloc failed");
     for (unsigned j = 0; j < CHUNK_PAGES; ++j) {
       void* heap_page = (void*)((uint8_t*)phys_heap_chunks[i] + j*PAGE_SIZE);
-      void* virt_page = (void*)((uint8_t*)heap + (CHUNK_PAGES*i+j)*PAGE_SIZE);
+      void* virt_page = (void*)((uint8_t*)mem + (CHUNK_PAGES*i+j)*PAGE_SIZE);
       [[maybe_unused]] void* res = virtMemAlloc.map_page(virt_page, heap_page);
       assert(res, "mapping heap page failed");
       // save addresses of suballocators
@@ -51,11 +40,12 @@ void HeapAllocator::initialize(
     }
   }
 
-  // set up heap blocks
-  heap->next = nullptr;
-  heap->size = (CHUNK_PAGES-3) * PAGE_SIZE;
-  heap->allocated = false;
-  debug::serial_printf("heap reserved at v %p\n", heap);
+  debug::serial_printf("Making LBA(%p) %p, %llu\n", &linked_block_alloc,
+                       mem, (LEVEL1_PAGES-3) * PAGE_SIZE);
+  linked_block_alloc.initialize(mem, (LEVEL1_PAGES-3) * PAGE_SIZE);
+  debug::serial_printf("LBA created\n");
+
+  debug::serial_printf("heap reserved at v %p\n", mem);
   debug::serial_printf("slab8 reserved at v %p\n", slab8);
   debug::serial_printf("slab16 reserved at v %p\n", slab16);
   debug::serial_printf("slab32 reserved at v %p\n", slab32);
@@ -110,28 +100,7 @@ void* HeapAllocator::slab32_malloc() {
   return nullptr;
 }
 
-void* HeapAllocator::block_malloc(size_t size) {
-  for (HeapBlock* node = heap; node != nullptr; node = node->next) {
-    if (!node->allocated && node->size - sizeof(HeapBlock) >= size) {
-      node->allocated = true;
-      size_t leftover = node->size - sizeof(HeapBlock) - size;
-      leftover -= leftover % HEAP_BLOCK_ALIGN;
-      if (leftover > 0) {
-        node->size -= leftover;
-        HeapBlock* next = (HeapBlock*)((uint8_t*)node + node->size);
-        next->next = node->next;
-        next->size = leftover;
-        next->allocated = false;
-        node->next = next;
-      }
-      return (void*)(node+1); // data is just after header
-    }
-  }
-  return nullptr;
-}
-
-void* HeapAllocator::malloc(size_t size) {
-  assert(heap, "HeapAllocator not initialized");
+void* HeapAllocator::malloc(lsize_t size) {
   if (size > HEAP_PAGES * PAGE_SIZE) {
     return nullptr;
   }
@@ -148,5 +117,5 @@ void* HeapAllocator::malloc(size_t size) {
     void* out = slab32_malloc();
     if (out) return out;
   }
-  return block_malloc(size);
+  return linked_block_alloc.malloc(size);
 }

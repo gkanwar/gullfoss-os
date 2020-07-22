@@ -1,5 +1,6 @@
 #include "phys_mem_allocator.h"
 
+#include <climits>
 #include <cstring>
 #include "assert.h"
 #include "bootboot.h"
@@ -7,8 +8,8 @@
 
 static PhysMemAllocator* inst;
 
-PhysMemAllocator::PhysMemAllocator() : last_alloc(0) { inst = this; }
-PhysMemAllocator& PhysMemAllocator::get() { return *inst; }
+PhysMemAllocator::PhysMemAllocator() : last_alloc(0) { assert_make_inst(inst, this); }
+PhysMemAllocator& PhysMemAllocator::get() { return assert_get_inst(inst); }
 
 static unsigned page_addr_to_bit(uint64_t addr) {
   return (uint32_t) (addr >> PAGE_ADDR_NBITS);
@@ -80,8 +81,9 @@ void* PhysMemAllocator::alloc1() {
   return nullptr;
 }
 
-void* PhysMemAllocator::alloc8() {
-  auto try_alloc8 = [&](unsigned i)->void* {
+void* PhysMemAllocator::allocMed() {
+  assert(NUM_PAGES_MED == 8, "allocMed wrong chunk size");
+  auto try_med_alloc = [&](unsigned i)->void* {
     uint8_t bitmap = mem_bitmap[i];
     if (bitmap == 0) {
       mem_bitmap[i] = 0xff;
@@ -93,23 +95,24 @@ void* PhysMemAllocator::alloc8() {
     }
   };
   for (unsigned i = last_alloc / 8; i < sizeof(mem_bitmap); ++i) {
-    void* out = try_alloc8(i);
+    void* out = try_med_alloc(i);
     if (out) return out;
   }
   for (unsigned i = 0; i < last_alloc / 8; ++i) {
-    void* out = try_alloc8(i);
+    void* out = try_med_alloc(i);
     if (out) return out;
   }
   return nullptr;
 }
 
-void* PhysMemAllocator::alloc32() {
-  const unsigned b32 = sizeof(uint32_t)/sizeof(uint8_t);
-  auto try_alloc32 = [&](unsigned i)->void* {
-    assert(i % b32 == 0, "i must be 32-page aligned");
-    uint32_t bitmap = ((uint32_t*)mem_bitmap)[i/b32];
+void* PhysMemAllocator::allocBig() {
+  assert(NUM_PAGES_BIG == 64, "allocBig wrong chunk size");
+  const unsigned b64 = sizeof(uint64_t)/sizeof(uint8_t);
+  auto try_big_alloc = [&](unsigned i)->void* {
+    assert(i % b64 == 0, "i must be 64-page aligned");
+    uint64_t bitmap = ((uint64_t*)mem_bitmap)[i/b64];
     if (bitmap == 0) {
-      ((uint32_t*)mem_bitmap)[i/b32] = 0xffffffff;
+      ((uint64_t*)mem_bitmap)[i/b64] = UINT64_MAX;
       last_alloc = 8*i;
       return (void*)bit_to_page_addr(8*i);
     }
@@ -117,13 +120,13 @@ void* PhysMemAllocator::alloc32() {
       return nullptr;
     }
   };
-  unsigned last_alloc_b32 = last_alloc/8 - (last_alloc/8)%b32;
-  for (unsigned i = last_alloc_b32; i < sizeof(mem_bitmap); i += b32) {
-    void* out = try_alloc32(i);
+  unsigned last_alloc_chunked = last_alloc/8 - (last_alloc/8)%b64;
+  for (unsigned i = last_alloc_chunked; i < sizeof(mem_bitmap); i += b64) {
+    void* out = try_big_alloc(i);
     if (out) return out;
   }
-  for (unsigned i = 0; i < last_alloc_b32; i += b32) {
-    void* out = try_alloc32(i);
+  for (unsigned i = 0; i < last_alloc_chunked; i += b64) {
+    void* out = try_big_alloc(i);
     if (out) return out;
   }
   return nullptr;

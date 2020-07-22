@@ -30,12 +30,12 @@ class FBTerminal {
   void set_bg_color(pixel_t bg_color) {
     this->bg_color = bg_color;
   }
-  void putc_at(char, size_t r, size_t c);
-  void putc_at(char, pixel_t fg_color, size_t r, size_t c);
+  void putc_at(char, lsize_t r, lsize_t c);
+  void putc_at(char, pixel_t fg_color, lsize_t r, lsize_t c);
   // write a NUL-terminated string from current location with wrapping
   // void write_string(const char*, size_t& r, size_t& c);
-  size_t width, height, charheight;
-  const size_t charwidth{8};
+  lsize_t width, height, charheight;
+  const lsize_t charwidth{8};
  private:
   pixel_t fg_color, bg_color;
   Framebuffer* framebuffer;

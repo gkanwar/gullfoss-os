@@ -9,24 +9,25 @@
 #include <memory>
 #include <stddef.h>
 #include <stdint.h>
+#include <types.h>
 
 class BlockSource {
  public:
-  virtual void read_block(size_t offset, size_t len, uint8_t* dest) = 0;
-  virtual size_t size() const = 0;
+  virtual void read_block(lsize_t offset, lsize_t len, uint8_t* dest) = 0;
+  virtual lsize_t size() const = 0;
 };
 
 class InMemorySource : public BlockSource {
  public:
-  InMemorySource(const uint8_t* src, size_t size)
+  InMemorySource(const uint8_t* src, lsize_t size)
       : src(src), buffer_size(size) {}
-  void read_block(size_t offset, size_t len, uint8_t* dest) {
+  void read_block(lsize_t offset, lsize_t len, uint8_t* dest) {
     std::memcpy(dest, src + offset, len);
   }
-  size_t size() const { return buffer_size; }
+  lsize_t size() const { return buffer_size; }
  private:
   const uint8_t* src;
-  size_t buffer_size;
+  lsize_t buffer_size;
 };
 
 

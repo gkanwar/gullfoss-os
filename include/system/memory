@@ -5,47 +5,75 @@
  * Schematically similar to <memory> from libstdc++.
  */
 
-template<typename T>
-class UniquePtr {
- public:
-  // empty constructor
-  UniquePtr() : ptr(nullptr) {};
-  // move constructor
-  UniquePtr(UniquePtr&& u) : ptr(u.release()) {}
-  // explicit constructor
-  explicit UniquePtr(T* ptr) : ptr(ptr) {}
-  ~UniquePtr() {
-    if (ptr) {
-      delete ptr;
-    }
-  }
-  T* get() { return ptr; }
-  const T* get() const { return ptr; }
-  T* release() {
-    T* out = ptr;
-    ptr = nullptr;
-    return out;
-  }
- private:
-  T* ptr;
-};
-
 namespace std {
 
-// Thanks to: <SO>/questions/7510182/how-does-stdmove-transfer-values-into-rvalues
-template<typename _Tp>
-struct remove_reference { typedef _Tp   type; };
+  // Thanks to: <SO>/questions/7510182/how-does-stdmove-transfer-values-into-rvalues
+  template<typename _Tp>
+  struct remove_reference { typedef _Tp   type; };
 
-template<typename _Tp>
-struct remove_reference<_Tp&> { typedef _Tp   type; };
+  template<typename _Tp>
+  struct remove_reference<_Tp&> { typedef _Tp   type; };
 
-template<typename _Tp>
-struct remove_reference<_Tp&&> { typedef _Tp   type; };
+  template<typename _Tp>
+  struct remove_reference<_Tp&&> { typedef _Tp   type; };
 
-template <typename T>
-typename remove_reference<T>::type&& move(T&& arg) {
-  return static_cast<typename remove_reference<T>::type&&>(arg);
-}
+  template <typename T>
+  typename remove_reference<T>::type&& move(T&& arg) {
+    return static_cast<typename remove_reference<T>::type&&>(arg);
+  }
+
+  template<typename T>
+  void swap(T& a, T& b) {
+    T tmp(move(a));
+    a = move(b);
+    b = move(tmp);
+  }
+
+  template<typename T>
+  class unique_ptr {
+  public:
+    // empty constructor
+    unique_ptr() : ptr(nullptr) {};
+    // move constructor
+    unique_ptr(unique_ptr&& u) : ptr(nullptr) { this->swap(u); }
+    // explicit constructor
+    explicit unique_ptr(T* ptr) : ptr(ptr) {}
+    ~unique_ptr() {
+      if (ptr) delete ptr;
+    }
+    // delete constructor/assignment
+    unique_ptr(unique_ptr const&) = delete;
+    unique_ptr& operator=(unique_ptr const&) = delete;
+
+    operator bool() const { return ptr; }
+
+    void swap(unique_ptr<T>& other) {
+      std::swap(ptr, other.ptr);
+    }
+
+    unique_ptr<T>& operator=(unique_ptr<T>&& up) {
+      this->swap(up);
+      return *this;
+    }
+
+    T* operator->() const { return ptr; }
+    T& operator*() const { return *ptr; }
+
+    T* get() { return ptr; }
+    const T* get() const { return ptr; }
+    T* release() {
+      T* out = ptr;
+      ptr = nullptr;
+      return out;
+    }
+  private:
+    T* ptr;
+  };
+
+  template< class T, class... Args > inline
+  unique_ptr<T> make_unique( Args&&... args ) {
+    return unique_ptr<T>(new T(args...));
+  }
 
 }
 

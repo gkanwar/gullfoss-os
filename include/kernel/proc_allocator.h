@@ -1,13 +1,14 @@
 #ifndef PROC_ALLOCATOR_H
 #define PROC_ALLOCATOR_H
 
+#include <memory>
 #include <stddef.h>
+#include "linked_block_allocator.h"
 #include "phys_mem_allocator.h"
 #include "virt_mem_allocator.h"
 
-// TODO: need to determine the right interface for this guy
-#define CHUNK_PAGES 32
-#define PROC_PAGES NUM_PT_ENTRIES // 2MiB proc
+// 1GiB proc (one page-dir)
+// #define PROC_PAGES LEVEL2_BLOCK_SIZE
 
 /**
  * Page-granularity allocator for user-space process memory. Offers two possible
@@ -25,10 +26,11 @@ class ProcAllocator {
  public:
   ProcAllocator(PhysMemAllocator&, VirtMemAllocator&);
   static ProcAllocator& get();
-  void* alloc_proc_segments(size_t image_size);
+  void* alloc_proc_segments(lsize_t image_size);
  private:
   PhysMemAllocator& physMemAlloc;
   VirtMemAllocator& virtMemAlloc;
+  std::unique_ptr<LinkedBlockAllocator> segment_alloc;
 };
 
 #endif

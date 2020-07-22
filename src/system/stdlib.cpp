@@ -224,8 +224,13 @@ static void write_fill(Writer putc, const format_spec& spec, uint16_t print_len)
   }
 }
 
+
 template<typename Writer>
-static void format_unsigned(Writer putc, const format_spec& spec, unsigned arg) {
+static void format_unsigned(Writer putc, const format_spec& spec, uint32_t arg) {
+  format_unsigned(putc, spec, (uint64_t)arg);
+}
+template<typename Writer>
+static void format_unsigned(Writer putc, const format_spec& spec, uint64_t arg) {
   char buf[32];
   char extra = 0;
   if (arg == 0) {

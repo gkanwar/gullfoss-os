@@ -64,7 +64,7 @@ class Shell : public KeyboardSubscriber {
  private:
   const KeyMap& key_map;
   FBTerminal term;
-  size_t pos_r, pos_c;
+  lsize_t pos_r, pos_c;
 };
 
 }

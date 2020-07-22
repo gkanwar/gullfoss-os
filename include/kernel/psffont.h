@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <types.h>
 
 class PSFFont {
  public:
@@ -15,9 +16,9 @@ class PSFFont {
   };
  private:
   const uint8_t* glyphs;
-  size_t num_glyphs;
+  uint num_glyphs;
   CharMap* char_map;
-  size_t char_map_count;
+  uint char_map_count;
   uint8_t* undef_glyph;
 };
 

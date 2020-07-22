@@ -36,7 +36,7 @@ class ELFLoader {
   Status load_process_image(ProcAllocator&);
   
  private:
-  // UniquePtr<BlockSource> src;
+  // unique_ptr<BlockSource> src;
   const uint8_t* src; // TODO: load from a generic block source
   const Elf64_Ehdr* elf_header;
   const Elf64_Shdr* sec_header_base;

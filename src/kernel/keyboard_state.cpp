@@ -6,14 +6,14 @@ using ModifierBit = KeyboardState::ModifierBit;
 
 static KeyboardState* inst;
 KeyboardState::KeyboardState() {
-  inst = this;
+  assert_make_inst(inst, this);
   debug::serial_printf("KeyboardState() scan_state = %08x\n", static_cast<unsigned>(scan_state));
   debug::serial_printf("KeyboardState() &scan_state = %p\n", &scan_state);
   debug::serial_printf("KeyboardState() &key_states = %p\n", key_states);
   debug::serial_printf("KeyboardState() &lock_state = %p\n", &lock_state);
   debug::serial_printf("KeyboardState() &scan_buf = %p\n", scan_buf);
 }
-KeyboardState& KeyboardState::get() { return *inst; }
+KeyboardState& KeyboardState::get() { return assert_get_inst(inst); }
 
 void KeyboardState::key_set_state(KeyCode code) {
   uint8_t state_bitfield = key_states[code / 8];

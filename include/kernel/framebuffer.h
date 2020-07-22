@@ -3,23 +3,25 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <types.h>
 #include "debug_serial.h"
 
 typedef uint32_t pixel_t;
 
 class Framebuffer {
  public:
-  Framebuffer(pixel_t framebuffer[], size_t length, size_t rows,
-              size_t cols, size_t scanline)
-      : length(length), rows(rows), cols(cols), scanline(scanline),
+  Framebuffer(pixel_t framebuffer[], lsize_t length, uint rows,
+              uint cols, lsize_t scanline)
+      : length(length), scanline(scanline), rows(rows), cols(cols), 
         buffer(framebuffer) {}
   void clear(pixel_t color) {
     debug::serial_printf("Clearing framebuffer (size %llu)\n", length);
-    for (unsigned i = 0; i < length/sizeof(pixel_t); ++i) {
+    for (uint i = 0; i < length/sizeof(pixel_t); ++i) {
       buffer[i] = color;
     }
   }
-  size_t length, rows, cols, scanline;
+  lsize_t length, scanline;
+  uint rows, cols;
   pixel_t* buffer;
 };
 

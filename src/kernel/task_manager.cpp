@@ -9,13 +9,13 @@
 
 static TaskManager* inst;
 TaskManager::TaskManager() {
-  inst = this;
+  assert_make_inst(inst, this);
   // initializing thread is the only task
   cur_task = new TaskNode;
   cur_task->next = cur_task;
   cur_task->prev = cur_task;
 }
-TaskManager& TaskManager::get() { return *inst; }
+TaskManager& TaskManager::get() { return assert_get_inst(inst); }
 
 #ifdef __LP64__
 #define NUM_GP_REGS 12
@@ -42,10 +42,10 @@ static void task_entry() {
 void TaskManager::start(void entry(void)) {
   // Allocate new kernel stack
   // TODO: Don't map full stack to physical memory
-  void* new_stack = VirtMemAllocator::get().find_free_block();
-  const unsigned chunk_pages = 32;
+  void* new_stack = VirtMemAllocator::get().alloc_free_l1_block();
+  constexpr auto chunk_pages = PhysMemAllocator::NUM_PAGES_BIG;
   for (unsigned i = 0; i < NUM_PT_ENTRIES/chunk_pages; ++i) {
-    void* phys_chunk = PhysMemAllocator::get().alloc32();
+    void* phys_chunk = PhysMemAllocator::get().allocBig();
     for (unsigned j = 0; j < chunk_pages; ++j) {
       void* phys_page = (void*)((uint8_t*)phys_chunk + j*PAGE_SIZE);
       void* virt_page = (void*)((uint8_t*)new_stack + (chunk_pages*i+j)*PAGE_SIZE);
