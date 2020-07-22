@@ -1,6 +1,7 @@
 #ifndef LINKED_BLOCK_ALLOCATOR_H
 #define LINKED_BLOCK_ALLOCATOR_H
 
+#include <memory>
 #include <stddef.h>
 #include <types.h>
 
@@ -15,6 +16,15 @@ class LinkedBlockAllocator {
  private:
   union Block;
   Block* head;
+};
+
+class LinkedPageAllocator {
+ public:
+  LinkedPageAllocator(void* mem, lsize_t mem_size);
+  void* reserve(lsize_t);
+ private:
+  struct Block;
+  std::unique_ptr<Block> head;
 };
 
 #endif

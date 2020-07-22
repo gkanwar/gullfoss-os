@@ -30,7 +30,7 @@ class ProcAllocator {
  private:
   PhysMemAllocator& physMemAlloc;
   VirtMemAllocator& virtMemAlloc;
-  std::unique_ptr<LinkedBlockAllocator> segment_alloc;
+  std::unique_ptr<LinkedPageAllocator> segment_alloc;
 };
 
 #endif

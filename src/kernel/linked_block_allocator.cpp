@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "assert.h"
 #include "debug_serial.h"
+#include "kernel.h"
 #include "linked_block_allocator.h"
 
 #define LINKED_BLOCK_ALIGN 64
@@ -45,6 +46,38 @@ void* LinkedBlockAllocator::malloc(lsize_t size) {
         node->next = next;
       }
       return (void*)(node+1); // data is just after header
+    }
+  }
+  return nullptr;
+}
+
+struct LinkedPageAllocator::Block {
+  std::unique_ptr<Block> next;
+  void* start;
+  lsize_t size;
+  bool allocated;
+  Block(Block* next, void* start, lsize_t size, bool allocated) :
+      next(next), start(start), size(size), allocated(allocated) {} 
+};
+
+LinkedPageAllocator::LinkedPageAllocator(void* mem, lsize_t mem_size) {
+  assert(mem_size % PAGE_SIZE == 0, "LinkedPageAllocator needs whole multiple of pages");
+  head = std::make_unique<Block>(nullptr, mem, mem_size, false);
+}
+
+void* LinkedPageAllocator::reserve(lsize_t size) {
+  assert(size % PAGE_SIZE == 0, "LinkedPageAllocator can only give out whole pages");
+  for (Block* node = head.get(); node != nullptr; node = node->next.get()) {
+    if (!node->allocated && node->size >= size) {
+      node->allocated = true;
+      lsize_t leftover = node->size - size;
+      if (leftover > 0) {
+        node->size -= leftover;
+        void* next_start = node->next->start;
+        Block* next = new Block(node->next.release(), next_start, leftover, false);
+        node->next = std::unique_ptr<Block>(next);
+      }
+      return node->start; // data is just after header
     }
   }
   return nullptr;
