@@ -2,6 +2,7 @@
 #include "assert.h"
 #include "debug_serial.h"
 #include "elf_loader.h"
+#include "kernel.h"
 
 using Status = ELFLoader::Status;
 
@@ -271,9 +272,11 @@ Status ELFLoader::load_process_image(ProcAllocator& alloc) {
     }
   }
 
+  Elf64_Addr segment_start = round_down(min_vaddr, PAGE_SIZE);
+  Elf64_Addr segment_end = round_up(max_vaddr, PAGE_SIZE);
   debug::serial_printf("Allocating (relocated) VM segments between (preferred) "
                        "%p and %p\n", (void*)min_vaddr, (void*)max_vaddr);
   [[maybe_unused]] // FORNOW
-  void* proc_image = alloc.alloc_proc_segments(max_vaddr - min_vaddr);
+  void* proc_image = alloc.alloc_proc_segments(segment_end - segment_start);
   PANIC_NOT_IMPLEMENTED("ELF load");
 }

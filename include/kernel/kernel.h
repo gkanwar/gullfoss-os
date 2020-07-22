@@ -14,6 +14,17 @@
 extern uint8_t _kernel_start;
 extern uint8_t _kernel_end;
 
-// #endif
+// Very common utils
+template <typename T, typename U> inline
+T round_up(T addr, U size) {
+  if (addr % size != 0) {
+    addr += size - addr % size;
+  }
+  return addr;
+}
+template <typename T, typename U> inline
+T round_down(T addr, U size) {
+  return addr - addr % size;
+}
 
 #endif
