@@ -35,6 +35,7 @@ class ELFLoader {
   Status parse_header();
   // NOTE: limited to PIC only, because of the shared memory space
   Status load_process_image(ProcAllocator&);
+  [[noreturn]] void exec_process();
   
  private:
   // unique_ptr<BlockSource> src;
@@ -42,6 +43,7 @@ class ELFLoader {
   const Elf64_Ehdr* elf_header;
   const Elf64_Shdr* sec_header_base;
   const Elf64_Phdr* prog_header_base;
+  Elf64_Off base_addr;
   Elf64_Addr entry;
 };
 

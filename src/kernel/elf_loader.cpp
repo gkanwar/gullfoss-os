@@ -286,7 +286,7 @@ Status ELFLoader::load_process_image(ProcAllocator& alloc) {
   // NOTE: base_addr should be considered to live in a (mod 2^64 space). We will
   // only do arithmetic with other addresses mod 2^64, so storing a negative
   // base addr using an unsigned `Elf64_Off` is okay.
-  Elf64_Off base_addr = (Elf64_Off)proc_image - segment_start;
+  base_addr = (Elf64_Off)proc_image - segment_start;
   for (unsigned i = 0; i < num_load_segments; ++i) {
     const Elf64_Phdr* segment = load_segments[i];
     void* base = (void*)(base_addr + segment->p_vaddr);
@@ -318,5 +318,13 @@ Status ELFLoader::load_process_image(ProcAllocator& alloc) {
     // leaving uninitialized data at the start/end of the segment (intentionally)
     std::memcpy(base, data, segment->p_filesz);
   }
-  PANIC_NOT_IMPLEMENTED("ELF load");
+
+  return Status::SUCCESS;
+}
+
+[[noreturn]] void ELFLoader::exec_process() {
+  void (*entry)(void) = (void (*)(void))(this->entry + base_addr);
+  // TODO: establish user-space stack instead of running on kernel stack
+  (*entry)();
+  ASSERT_NOT_REACHED;
 }

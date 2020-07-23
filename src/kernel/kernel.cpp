@@ -193,7 +193,7 @@ extern "C" {
   if (ret != ELFLoader::Status::SUCCESS) {
     debug::serial_printf("Failed to load ELF: %d\n", ret);
   }
-  // TODO: allocate proc memory, load sections from ELF into mem
+  elf_loader.exec_process();
   ASSERT_NOT_REACHED;
 }
 
