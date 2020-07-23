@@ -47,8 +47,8 @@ void TaskManager::start(void entry(void)) {
   for (unsigned i = 0; i < NUM_PT_ENTRIES/chunk_pages; ++i) {
     void* phys_chunk = PhysMemAllocator::get().allocBig();
     for (unsigned j = 0; j < chunk_pages; ++j) {
-      void* phys_page = (void*)((uint8_t*)phys_chunk + j*PAGE_SIZE);
-      void* virt_page = (void*)((uint8_t*)new_stack + (chunk_pages*i+j)*PAGE_SIZE);
+      void* phys_page = phys_chunk + j*PAGE_SIZE;
+      void* virt_page = new_stack + (chunk_pages*i+j)*PAGE_SIZE;
       [[maybe_unused]] void* res = VirtMemAllocator::get().map_page(virt_page, phys_page);
       assert(res, "mapping new stack page failed");
     }

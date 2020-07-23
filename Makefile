@@ -33,8 +33,8 @@ $(shell mkdir -p $(TBIN)/initrd)
 $(shell mkdir -p $(TBIN)/kernel)
 $(shell mkdir -p $(TBIN)/system)
 
-CFLAGS := -ffreestanding -mcmodel=kernel -mno-red-zone -Wall -Wextra -Werror
-CXXFLAGS := -std=c++17 -ffreestanding -fno-rtti -fno-exceptions -mcmodel=kernel -mno-red-zone -Wall -Wextra -Werror
+CFLAGS := -ffreestanding -mcmodel=kernel -mno-red-zone -Wall -Wextra -Werror -Wno-pointer-arith
+CXXFLAGS := -std=c++17 -ffreestanding -fno-rtti -fno-exceptions -mcmodel=kernel -mno-red-zone -Wall -Wextra -Werror -Wno-pointer-arith
 ASFLAGS := -x assembler-with-cpp
 RELEASE_FLAGS := -DNDEBUG -O3
 DEBUG_FLAGS := -DDEBUG -O2 -g

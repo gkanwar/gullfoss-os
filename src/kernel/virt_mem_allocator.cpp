@@ -243,3 +243,36 @@ void* VirtMemAllocator::map_page(void* virt_page, void* phys_page) {
   do_map_page(virt_page, phys_page);
   return virt_page;
 }
+
+void map_block(
+    VirtMemAllocator& virtMemAlloc, PhysMemAllocator& physMemAlloc,
+    void* mem, lsize_t size) {
+  assert(size % PAGE_SIZE == 0, "block must be multiple of PAGE_SIZE");
+  assert((uint64_t)mem % PAGE_SIZE == 0, "mem must be page-aligned");
+  void* end = mem + size;
+
+  // map blocks in descending size for efficiency
+  constexpr lsize_t big_alloc_size = PhysMemAllocator::NUM_PAGES_BIG * PAGE_SIZE;
+  for (; mem <= end - big_alloc_size; mem += big_alloc_size) {
+    void* phys_mem = physMemAlloc.allocBig();
+    assert(phys_mem, "not enough memory to map block");
+    for (unsigned i = 0; i < PhysMemAllocator::NUM_PAGES_BIG; ++i) {
+      virtMemAlloc.map_page(mem + i*PAGE_SIZE, phys_mem + i*PAGE_SIZE);
+    }
+  }
+
+  constexpr lsize_t med_alloc_size = PhysMemAllocator::NUM_PAGES_MED * PAGE_SIZE;
+  for (; mem <= end - med_alloc_size; mem += med_alloc_size) {
+    void* phys_mem = physMemAlloc.allocMed();
+    assert(phys_mem, "not enough memory to map block");
+    for (unsigned i = 0; i < PhysMemAllocator::NUM_PAGES_MED; ++i) {
+      virtMemAlloc.map_page(mem + i*PAGE_SIZE, phys_mem + i*PAGE_SIZE);
+    }
+  }
+
+  for (; mem < end; mem += PAGE_SIZE) {
+    void* phys_mem = physMemAlloc.alloc1();
+    assert(phys_mem, "not enough memory to map block");
+    virtMemAlloc.map_page(mem, phys_mem);
+  }
+}

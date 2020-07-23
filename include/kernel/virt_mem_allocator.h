@@ -76,4 +76,8 @@ class VirtMemAllocator {
   PhysMemAllocator* physMemAlloc;
 };
 
+void map_block(
+    VirtMemAllocator& virtMemAlloc, PhysMemAllocator& physMemAlloc,
+    void* mem, lsize_t size);
+
 #endif

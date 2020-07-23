@@ -2,6 +2,7 @@
 #include "assert.h"
 #include "debug_serial.h"
 #include "heap_allocator.h"
+#include "virt_mem_allocator.h"
 
 static HeapAllocator* inst;
 
@@ -15,35 +16,16 @@ void HeapAllocator::initialize(
   void* mem = virtMemAlloc.alloc_free_l1_block();
   assert(mem, "not enough mem for VirtMemAllocator");
 
-  assert(HEAP_PAGES % CHUNK_PAGES == 0, "heap must be allocated in 'big' chunks");
-  const unsigned n_chunks = HEAP_PAGES / CHUNK_PAGES;
-  for (unsigned i = 0; i < n_chunks; ++i) {
-    phys_heap_chunks[i] = physMemAlloc.allocBig();
-    assert(phys_heap_chunks[i], "heap chunk alloc failed");
-    for (unsigned j = 0; j < CHUNK_PAGES; ++j) {
-      void* heap_page = (void*)((uint8_t*)phys_heap_chunks[i] + j*PAGE_SIZE);
-      void* virt_page = (void*)((uint8_t*)mem + (CHUNK_PAGES*i+j)*PAGE_SIZE);
-      [[maybe_unused]] void* res = virtMemAlloc.map_page(virt_page, heap_page);
-      assert(res, "mapping heap page failed");
-      // save addresses of suballocators
-      if (j == 0) {
-        if (i == n_chunks-3) {
-          slab8 = (Slab8*)virt_page;
-        }
-        else if (i == n_chunks-2) {
-          slab16 = (Slab16*)virt_page;
-        }
-        else if (i == n_chunks-1) {
-          slab32 = (Slab32*)virt_page;
-        }
-      }
-    }
-  }
+  map_block(virtMemAlloc, physMemAlloc, mem, LEVEL1_PAGES*PAGE_SIZE);
 
-  debug::serial_printf("Making LBA(%p) %p, %llu\n", &linked_block_alloc,
-                       mem, (LEVEL1_PAGES-3) * PAGE_SIZE);
+  // parcel out suballocators
+  assert(HEAP_PAGES % CHUNK_PAGES == 0, "heap must be a multiple of CHUNK_PAGES");
+  constexpr auto n_chunks = HEAP_PAGES / CHUNK_PAGES;
+  
   linked_block_alloc.initialize(mem, (LEVEL1_PAGES-3) * PAGE_SIZE);
-  debug::serial_printf("LBA created\n");
+  slab8 = (Slab8*)(mem + (n_chunks-3) * CHUNK_PAGES * PAGE_SIZE);
+  slab16 = (Slab16*)(mem + (n_chunks-2) * CHUNK_PAGES * PAGE_SIZE);
+  slab32 = (Slab32*)(mem + (n_chunks-1) * CHUNK_PAGES * PAGE_SIZE);
 
   debug::serial_printf("heap reserved at v %p\n", mem);
   debug::serial_printf("slab8 reserved at v %p\n", slab8);

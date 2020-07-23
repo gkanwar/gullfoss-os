@@ -27,7 +27,6 @@ class HeapAllocator {
   void* slab16_malloc();
   void* slab32_malloc();
   void* block_malloc(lsize_t);
-  void* phys_heap_chunks[HEAP_PAGES / CHUNK_PAGES];
   LinkedBlockAllocator linked_block_alloc;
   // Avoid really tiny mallocs hitting the main heap, using "slab"
   // suballocators for primitive small types. Each suballoc is given one chunk.
