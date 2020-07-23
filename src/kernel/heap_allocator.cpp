@@ -2,6 +2,7 @@
 #include "assert.h"
 #include "debug_serial.h"
 #include "heap_allocator.h"
+#include "util.h"
 #include "virt_mem_allocator.h"
 
 static HeapAllocator* inst;
@@ -16,7 +17,9 @@ void HeapAllocator::initialize(
   void* mem = virtMemAlloc.alloc_free_l1_block();
   assert(mem, "not enough mem for VirtMemAllocator");
 
-  map_block(virtMemAlloc, physMemAlloc, mem, LEVEL1_PAGES*PAGE_SIZE);
+  uint8_t map_flags = 0;
+  util::set_bit(map_flags, MapFlag::Writeable);
+  map_block(physMemAlloc, virtMemAlloc, mem, LEVEL1_PAGES*PAGE_SIZE, map_flags);
 
   // parcel out suballocators
   assert(HEAP_PAGES % CHUNK_PAGES == 0, "heap must be a multiple of CHUNK_PAGES");

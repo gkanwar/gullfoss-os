@@ -17,14 +17,16 @@ extern uint8_t _kernel_end;
 // Very common utils
 template <typename T, typename U> inline
 T round_up(T addr, U size) {
-  if (addr % size != 0) {
-    addr += size - addr % size;
+  // WARNING: this cast is not portable
+  if ((uint64_t)addr % size != 0) {
+    addr += size - (uint64_t)addr % size;
   }
   return addr;
 }
 template <typename T, typename U> inline
 T round_down(T addr, U size) {
-  return addr - addr % size;
+  // WARNING: this cast is not portable
+  return addr - (uint64_t)addr % size;
 }
 
 #endif

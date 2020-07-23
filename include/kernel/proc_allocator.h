@@ -26,7 +26,8 @@ class ProcAllocator {
  public:
   ProcAllocator(PhysMemAllocator&, VirtMemAllocator&);
   static ProcAllocator& get();
-  void* alloc_proc_segments(lsize_t image_size);
+  void* reserve_proc_segments(lsize_t image_size);
+  void map_segment(void* base, lsize_t size, uint8_t flags);
  private:
   PhysMemAllocator& physMemAlloc;
   VirtMemAllocator& virtMemAlloc;

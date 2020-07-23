@@ -1,5 +1,6 @@
 #include <memory>
 #include "assert.h"
+#include "debug_serial.h"
 #include "proc_allocator.h"
 
 static ProcAllocator* inst;
@@ -15,9 +16,12 @@ ProcAllocator::ProcAllocator(
 
 ProcAllocator& ProcAllocator::get() { return assert_get_inst(inst); }
 
-void* ProcAllocator::alloc_proc_segments(lsize_t size) {
-  [[maybe_unused]]
-  void* segment = segment_alloc->reserve(size);
-  // TODO: alloc phys mem and back the segment before returning
-  PANIC_NOT_IMPLEMENTED("alloc_proc_segments");
+void* ProcAllocator::reserve_proc_segments(lsize_t size) {
+  void* mem = segment_alloc->reserve(size);
+  debug::serial_printf("Reserved proc mem in [%p, %p]\n", mem, mem+size);
+  return mem;
+}
+
+void ProcAllocator::map_segment(void* base, lsize_t size, uint8_t flags) {
+  return map_block(physMemAlloc, virtMemAlloc, base, size, flags);
 }

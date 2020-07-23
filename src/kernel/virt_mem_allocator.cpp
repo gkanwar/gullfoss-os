@@ -163,11 +163,10 @@ PageVirtualStatus VirtMemAllocator::page_map_status(void* page) {
   return PageVirtualStatus::Present;
 }
 
-void VirtMemAllocator::do_map_page(void* virt_page, void* phys_page) {
+void VirtMemAllocator::do_map_page(void* virt_page, void* phys_page, uint8_t extra_flags) {
   assert(physMemAlloc,
          "VirtMemAllocator needs to bind a PhysMemAllocator before mapping pages");
   // debug::serial_printf("do_map_page %p -> %p\n", virt_page, phys_page);
-  uint8_t extra_flags = 0;
   uint64_t addr = (uint64_t)virt_page;
   PageTable* pml3_table = (PageTable*)resolve_entry(*pml4_table, PT4_INDEX(addr));
   if (!pml3_table || pml3_table == (void*)RESERVE_ADDR) {
@@ -234,19 +233,38 @@ void VirtMemAllocator::reserve_entry(void* virt_page, PagingLevel level) {
 #error "only PML4 supported"
 #endif
 
-void* VirtMemAllocator::map_page(void* virt_page, void* phys_page) {
+void* VirtMemAllocator::map_page(void* virt_page, void* phys_page, uint8_t flags) {
   if (!virt_page) {
     virt_page = alloc_free_page();
   }
   assert((lsize_t)virt_page % PAGE_SIZE == 0, "virt page must be aligned");
   assert((lsize_t)phys_page % PAGE_SIZE == 0, "phys page must be aligned");
-  do_map_page(virt_page, phys_page);
+
+  uint8_t extra_flags = 0;
+  
+  if (util::get_bit(flags, MapFlag::Executable)) {
+    util::unset_bit(flags, MapFlag::Executable);
+    // TODO: kernel support for NX, FORNOW just keep user-readable
+    util::set_bit(extra_flags, PageTableFlags::UserSuper);
+  }
+  if (util::get_bit(flags, MapFlag::Writeable)) {
+    util::unset_bit(flags, MapFlag::Writeable);
+    util::set_bit(extra_flags, PageTableFlags::ReadWrite);
+  }
+  if (util::get_bit(flags, MapFlag::UserReadable)) {
+    util::unset_bit(flags, MapFlag::UserReadable);
+    util::set_bit(extra_flags, PageTableFlags::UserSuper); // user-readable
+  }
+  assert(flags == 0, "do_map_page did not handle all flags");
+
+  do_map_page(virt_page, phys_page, extra_flags);
+
   return virt_page;
 }
 
 void map_block(
-    VirtMemAllocator& virtMemAlloc, PhysMemAllocator& physMemAlloc,
-    void* mem, lsize_t size) {
+    PhysMemAllocator& physMemAlloc, VirtMemAllocator& virtMemAlloc,
+    void* mem, lsize_t size, uint8_t flags) {
   assert(size % PAGE_SIZE == 0, "block must be multiple of PAGE_SIZE");
   assert((uint64_t)mem % PAGE_SIZE == 0, "mem must be page-aligned");
   void* end = mem + size;
@@ -257,7 +275,7 @@ void map_block(
     void* phys_mem = physMemAlloc.allocBig();
     assert(phys_mem, "not enough memory to map block");
     for (unsigned i = 0; i < PhysMemAllocator::NUM_PAGES_BIG; ++i) {
-      virtMemAlloc.map_page(mem + i*PAGE_SIZE, phys_mem + i*PAGE_SIZE);
+      virtMemAlloc.map_page(mem + i*PAGE_SIZE, phys_mem + i*PAGE_SIZE, flags);
     }
   }
 
@@ -266,13 +284,13 @@ void map_block(
     void* phys_mem = physMemAlloc.allocMed();
     assert(phys_mem, "not enough memory to map block");
     for (unsigned i = 0; i < PhysMemAllocator::NUM_PAGES_MED; ++i) {
-      virtMemAlloc.map_page(mem + i*PAGE_SIZE, phys_mem + i*PAGE_SIZE);
+      virtMemAlloc.map_page(mem + i*PAGE_SIZE, phys_mem + i*PAGE_SIZE, flags);
     }
   }
 
   for (; mem < end; mem += PAGE_SIZE) {
     void* phys_mem = physMemAlloc.alloc1();
     assert(phys_mem, "not enough memory to map block");
-    virtMemAlloc.map_page(mem, phys_mem);
+    virtMemAlloc.map_page(mem, phys_mem, flags);
   }
 }

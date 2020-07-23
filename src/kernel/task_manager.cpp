@@ -5,6 +5,7 @@
 #include "interrupt_manager.h"
 #include "phys_mem_allocator.h"
 #include "task_manager.h"
+#include "util.h"
 #include "virt_mem_allocator.h"
 
 static TaskManager* inst;
@@ -44,12 +45,16 @@ void TaskManager::start(void entry(void)) {
   // TODO: Don't map full stack to physical memory
   void* new_stack = VirtMemAllocator::get().alloc_free_l1_block();
   constexpr auto chunk_pages = PhysMemAllocator::NUM_PAGES_BIG;
+  uint8_t stack_map_flags = 0;
+  util::set_bit(stack_map_flags, MapFlag::Writeable);
   for (unsigned i = 0; i < NUM_PT_ENTRIES/chunk_pages; ++i) {
     void* phys_chunk = PhysMemAllocator::get().allocBig();
     for (unsigned j = 0; j < chunk_pages; ++j) {
       void* phys_page = phys_chunk + j*PAGE_SIZE;
       void* virt_page = new_stack + (chunk_pages*i+j)*PAGE_SIZE;
-      [[maybe_unused]] void* res = VirtMemAllocator::get().map_page(virt_page, phys_page);
+      
+      [[maybe_unused]] void* res =
+          VirtMemAllocator::get().map_page(virt_page, phys_page, stack_map_flags);
       assert(res, "mapping new stack page failed");
     }
   }

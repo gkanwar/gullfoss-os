@@ -33,6 +33,7 @@ class ELFLoader {
   
   ELFLoader(const uint8_t* src);
   Status parse_header();
+  // NOTE: limited to PIC only, because of the shared memory space
   Status load_process_image(ProcAllocator&);
   
  private:

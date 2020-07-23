@@ -46,6 +46,14 @@ enum class PagingLevel {
   PML4 = 5,
 };
 
+enum class MapFlag {
+  // TODO: needs proper handling, right now is equiv to UserReadable
+  Executable = 0,
+  Writeable = 1,
+  // kernel can always read
+  UserReadable = 2,
+};
+
 class VirtMemAllocator {
  public:
   // Takes ownership of the paging structures handed off from bootloader.
@@ -59,7 +67,7 @@ class VirtMemAllocator {
   // If `virt_page` is unavailable, returns `nullptr`. If `virt_page` is
   // `nullptr`, finds an arbitrary free page above `_kernel_start` and maps
   // there.
-  void* map_page(void* virt_page, void* phys_page);
+  void* map_page(void* virt_page, void* phys_page, uint8_t flags);
   // Find and reserve unmapped entry at a given level of the paging structure.
   // NOTE: reservation does not MAP anything, but uses higher page table bits
   // to indicate that the consumer plans to map things there.
@@ -69,7 +77,7 @@ class VirtMemAllocator {
   void* alloc_free_l3_block();
  private:
   void* find_free_block(const lsize_t, PageVirtualStatus);
-  void do_map_page(void*, void*);
+  void do_map_page(void*, void*, uint8_t);
   void reserve_entry(void*, PagingLevel);
   PageVirtualStatus page_map_status(void*);
   PageTable* pml4_table;
@@ -77,7 +85,7 @@ class VirtMemAllocator {
 };
 
 void map_block(
-    VirtMemAllocator& virtMemAlloc, PhysMemAllocator& physMemAlloc,
-    void* mem, lsize_t size);
+    PhysMemAllocator& physMemAlloc, VirtMemAllocator& virtMemAlloc,
+    void* mem, lsize_t size, uint8_t flags);
 
 #endif

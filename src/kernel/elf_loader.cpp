@@ -1,8 +1,11 @@
 #include <climits>
+#include <cstring>
 #include "assert.h"
 #include "debug_serial.h"
 #include "elf_loader.h"
 #include "kernel.h"
+#include "util.h"
+#include "virt_mem_allocator.h"
 
 using Status = ELFLoader::Status;
 
@@ -216,6 +219,9 @@ Status ELFLoader::load_process_image(ProcAllocator& alloc) {
   Elf64_Addr min_vaddr = ULLONG_MAX;
   Elf64_Addr max_vaddr = 0;
   auto add_load_segment = [&](auto prog_header) {
+    debug::serial_printf(
+        "Adding loadable [%p, %p]\n", prog_header->p_vaddr,
+        prog_header->p_vaddr + prog_header->p_memsz);
     load_segments[num_load_segments++] = prog_header;
     if (prog_header->p_vaddr < min_vaddr) {
       min_vaddr = prog_header->p_vaddr;
@@ -276,7 +282,41 @@ Status ELFLoader::load_process_image(ProcAllocator& alloc) {
   Elf64_Addr segment_end = round_up(max_vaddr, PAGE_SIZE);
   debug::serial_printf("Allocating (relocated) VM segments between (preferred) "
                        "%p and %p\n", (void*)min_vaddr, (void*)max_vaddr);
-  [[maybe_unused]] // FORNOW
-  void* proc_image = alloc.alloc_proc_segments(segment_end - segment_start);
+  void* proc_image = alloc.reserve_proc_segments(segment_end - segment_start);
+  // NOTE: base_addr should be considered to live in a (mod 2^64 space). We will
+  // only do arithmetic with other addresses mod 2^64, so storing a negative
+  // base addr using an unsigned `Elf64_Off` is okay.
+  Elf64_Off base_addr = (Elf64_Off)proc_image - segment_start;
+  for (unsigned i = 0; i < num_load_segments; ++i) {
+    const Elf64_Phdr* segment = load_segments[i];
+    void* base = (void*)(base_addr + segment->p_vaddr);
+    // Apparently PT_PHDR is canonically assumed to be "covered" by the first
+    // PT_LOAD segment, so don't map it explicitly.
+    if (segment->p_type != PT_PHDR) {
+      uint8_t map_flags = 0;
+      if (segment->p_flags & ElfSegmentAttrib::PF_X) {
+        util::set_bit(map_flags, MapFlag::Executable);
+      }
+      if (segment->p_flags & ElfSegmentAttrib::PF_W) {
+        util::set_bit(map_flags, MapFlag::Writeable);
+      }
+      if (segment->p_flags & ElfSegmentAttrib::PF_R) {
+        util::set_bit(map_flags, MapFlag::UserReadable);
+      }
+      debug::serial_printf("Mapping segment %p [%llu]\n", base, segment->p_memsz);
+      void* map_base = round_down(base, PAGE_SIZE);
+      lsize_t map_size = round_up(
+          segment->p_memsz + (Elf64_Xword)base - (Elf64_Xword)map_base, PAGE_SIZE);
+      alloc.map_segment(map_base, map_size, map_flags);
+    }
+  }
+  for (unsigned i = 0; i < num_load_segments; ++i) {
+    const Elf64_Phdr* segment = load_segments[i];
+    void* base = (void*)(base_addr + segment->p_vaddr);
+    const uint8_t* data = src + segment->p_offset;
+    // NOTE: p_filesz may be shorter than p_memsz and base may be past map_base,
+    // leaving uninitialized data at the start/end of the segment (intentionally)
+    std::memcpy(base, data, segment->p_filesz);
+  }
   PANIC_NOT_IMPLEMENTED("ELF load");
 }
