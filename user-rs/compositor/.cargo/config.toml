@@ -1,5 +1,5 @@
 [build]
 # TODO: need to figure out kernel linkages without this
 # Also this flag is particularly dangerous...
-rustflags = ["-C", "link-args=--warn-unresolved-symbols"] #"--cap-lints=forbid", "-Funsafe-code"]
+rustflags = [] #"--cap-lints=forbid", "-Funsafe-code"]
 target = "../x86_64-unknown-none.json"

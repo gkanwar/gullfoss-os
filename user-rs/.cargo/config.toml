@@ -1,5 +1,6 @@
 [build]
 target-dir = "app_target"
+rustflags = ["-C", "link-args=-L../libkernel/native_stubs"]
 
 [profile.dev]
 panic = "abort" # no unwinding info

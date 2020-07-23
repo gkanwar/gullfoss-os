@@ -23,6 +23,7 @@ extern "C" fn eh_personality() {
   // TODO: deal with unwinding the stack
 }
 
+#[link(name="kernel_stubs", kind="dylib")]
 extern "C" {
   pub fn spawn(path: *const u8, path_len: size_t) -> ();
   pub fn r#yield() -> ();
