@@ -75,10 +75,12 @@ class VirtMemAllocator {
   void* alloc_free_l1_block();
   void* alloc_free_l2_block();
   void* alloc_free_l3_block();
+  // Mark a page as "poison" -- not present, and not possible to allocate
+  void poison_page(void*);
  private:
   void* find_free_block(const lsize_t, PageVirtualStatus);
   void do_map_page(void*, void*, uint8_t);
-  void reserve_entry(void*, PagingLevel);
+  void reserve_entry(void*, PagingLevel, uint64_t);
   PageVirtualStatus page_map_status(void*);
   PageTable* pml4_table;
   PhysMemAllocator* physMemAlloc;

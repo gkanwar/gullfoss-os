@@ -138,6 +138,7 @@ int kernel_early_main(const BOOTBOOT& info, pixel_t* framebuffer) {
   unsigned count = (info.size - 128)/sizeof(MMapEnt);
   physMemAlloc.init_mmap(mmap, count);
   virtMemAlloc.initialize(&physMemAlloc);
+  virtMemAlloc.poison_page(nullptr);
   debug::serial_printf("init heap pages...\n");
   heapAlloc.initialize(physMemAlloc, virtMemAlloc);
   debug::serial_printf("done\n");

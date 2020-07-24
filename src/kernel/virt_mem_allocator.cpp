@@ -30,7 +30,8 @@ union PageTableEntry {
 #  error "only PML4 supported"
 #endif
 
-constexpr uint64_t RESERVE_ADDR = 0xabadbadbadbad000 & PHYS_ADDR_MASK;
+constexpr uint64_t RESERVE_MAGIC = 0xcafecafecafec000 & PHYS_ADDR_MASK;
+constexpr uint64_t POISON_MAGIC  = 0xabadbadbadbad000 & PHYS_ADDR_MASK;
 
 enum class PageTableFlags {
   Present = 0,
@@ -122,22 +123,27 @@ void* VirtMemAllocator::find_free_block(
 void* VirtMemAllocator::alloc_free_l1_block() {
   void* out = find_free_block(LEVEL1_BLOCK_SIZE, PageVirtualStatus::PageTableMissing);
   if (!out) return out;
-  reserve_entry(out, PagingLevel::PageTable);
+  reserve_entry(out, PagingLevel::PageTable, RESERVE_MAGIC);
   return out;
 }
 
 void* VirtMemAllocator::alloc_free_l2_block() {
   void* out = find_free_block(LEVEL2_BLOCK_SIZE, PageVirtualStatus::PageDirMissing);
   if (!out) return out;
-  reserve_entry(out, PagingLevel::PageDir);
+  reserve_entry(out, PagingLevel::PageDir, RESERVE_MAGIC);
   return out;
 }
 
 void* VirtMemAllocator::alloc_free_l3_block() {
   void* out = find_free_block(LEVEL3_BLOCK_SIZE, PageVirtualStatus::PageDirPTMissing);
   if (!out) return out;
-  reserve_entry(out, PagingLevel::PageDirPT);
+  reserve_entry(out, PagingLevel::PageDirPT, RESERVE_MAGIC);
   return out;
+}
+
+void VirtMemAllocator::poison_page(void* page) {
+  assert((uint64_t)page % PAGE_SIZE == 0, "page must be page-aligned");
+  reserve_entry(page, PagingLevel::Page, POISON_MAGIC);
 }
 
 #if (PAGING == PAGING_PML4)
@@ -169,19 +175,19 @@ void VirtMemAllocator::do_map_page(void* virt_page, void* phys_page, uint8_t ext
   // debug::serial_printf("do_map_page %p -> %p\n", virt_page, phys_page);
   uint64_t addr = (uint64_t)virt_page;
   PageTable* pml3_table = (PageTable*)resolve_entry(*pml4_table, PT4_INDEX(addr));
-  if (!pml3_table || pml3_table == (void*)RESERVE_ADDR) {
+  if (!pml3_table || pml3_table == (void*)RESERVE_MAGIC) {
     pml3_table = (PageTable*)physMemAlloc->alloc1();
     std::memset(pml3_table, 0, sizeof(PageTable));
     add_entry(*pml4_table, PT4_INDEX(addr), (void*)pml3_table, extra_flags);
   }
   PageTable* pml2_table = (PageTable*)resolve_entry(*pml3_table, PT3_INDEX(addr));
-  if (!pml2_table || pml2_table == (void*)RESERVE_ADDR) {
+  if (!pml2_table || pml2_table == (void*)RESERVE_MAGIC) {
     pml2_table = (PageTable*)physMemAlloc->alloc1();
     std::memset(pml2_table, 0, sizeof(PageTable));
     add_entry(*pml3_table, PT3_INDEX(addr), (void*)pml2_table, extra_flags);
   }
   PageTable* pml1_table = (PageTable*)resolve_entry(*pml2_table, PT2_INDEX(addr));
-  if (!pml1_table || pml1_table == (void*)RESERVE_ADDR) {
+  if (!pml1_table || pml1_table == (void*)RESERVE_MAGIC) {
     pml1_table = (PageTable*)physMemAlloc->alloc1();
     std::memset(pml1_table, 0, sizeof(PageTable));
     add_entry(*pml2_table, PT2_INDEX(addr), (void*)pml1_table, extra_flags);
@@ -192,7 +198,8 @@ void VirtMemAllocator::do_map_page(void* virt_page, void* phys_page, uint8_t ext
   add_entry(*pml1_table, PT1_INDEX(addr), phys_page, extra_flags);
 }
 
-void VirtMemAllocator::reserve_entry(void* virt_page, PagingLevel level) {
+void VirtMemAllocator::reserve_entry(
+    void* virt_page, PagingLevel level, uint64_t magic_value) {
   assert(level < PagingLevel::PageDirPT, "paging level too high for reservation");
   uint8_t extra_flags = 0;
   uint64_t addr = (uint64_t)virt_page;
@@ -205,7 +212,7 @@ void VirtMemAllocator::reserve_entry(void* virt_page, PagingLevel level) {
   PageTable* pml2_table = (PageTable*)resolve_entry(*pml3_table, PT3_INDEX(addr));
   if (level == PagingLevel::PageDir) {
     assert(!pml2_table, "attempting to reserve already-reserved mem");
-    set_entry(*pml3_table, PT3_INDEX(addr), (void*)RESERVE_ADDR, extra_flags);
+    set_entry(*pml3_table, PT3_INDEX(addr), (void*)magic_value, extra_flags);
     return;
   }
   else if (!pml2_table) {
@@ -216,7 +223,7 @@ void VirtMemAllocator::reserve_entry(void* virt_page, PagingLevel level) {
   PageTable* pml1_table = (PageTable*)resolve_entry(*pml2_table, PT2_INDEX(addr));
   if (level == PagingLevel::PageTable) {
     assert(!pml1_table, "attempting to reserve already-reserved mem");
-    set_entry(*pml2_table, PT2_INDEX(addr), (void*)RESERVE_ADDR, extra_flags);
+    set_entry(*pml2_table, PT2_INDEX(addr), (void*)magic_value, extra_flags);
     return;
   }
   else if (!pml1_table) {
@@ -224,9 +231,12 @@ void VirtMemAllocator::reserve_entry(void* virt_page, PagingLevel level) {
     std::memset(pml1_table, 0, sizeof(PageTable));
     add_entry(*pml2_table, PT2_INDEX(addr), (void*)pml1_table, extra_flags);
   }
+  assert(level == PagingLevel::Page, "unknown paging level");
+  // TODO: this lets us reserve already-mapped null page. Not relevant in
+  // practice, but dissatisfying.
   void* page = resolve_entry(*pml1_table, PT1_INDEX(addr));
   assert(!page, "attempting to reserve already-reserved mem");
-  set_entry(*pml1_table, PT1_INDEX(addr), (void*)RESERVE_ADDR, extra_flags);
+  set_entry(*pml1_table, PT1_INDEX(addr), (void*)magic_value, extra_flags);
 }
 
 #else
