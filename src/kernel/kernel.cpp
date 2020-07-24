@@ -27,6 +27,7 @@
 #include "phys_mem_allocator.h"
 #include "psffont.h"
 #include "shell.h"
+#include "syscalls.h"
 #include "tar.h"
 #include "task_manager.h"
 #include "terminal.h"
@@ -299,5 +300,14 @@ extern "C" {
     // Enter usual C++ happy land, where we can use new, etc.
     debug::serial_printf("start kernel_main\n");
     kernel_main();
+  }
+
+  // FIXME: huge hack to just get userspace graphics going
+  framebuffer_t get_framebuffer() {
+    return {
+      .pixels = (u32*)&_bootboot_fb,
+      .width = _bootboot.fb_width,
+      .height = _bootboot.fb_height
+    };
   }
 }

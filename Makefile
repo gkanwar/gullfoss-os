@@ -64,6 +64,7 @@ KERNEL_SRCS = \
 	proc_allocator.cpp \
 	psffont.cpp \
 	shell.cpp \
+	syscalls.cpp \
 	tar.cpp \
 	task_manager.cpp \
 	terminal.cpp \

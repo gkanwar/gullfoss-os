@@ -4,6 +4,7 @@
 #include "debug_serial.h"
 #include "elf_loader.h"
 #include "kernel.h"
+#include "syscalls.h"
 #include "util.h"
 #include "virt_mem_allocator.h"
 
@@ -371,11 +372,11 @@ Status ELFLoader::load_dylib(const char* name) {
   assert(std::strcmp(name, "libkernel_stubs.so") == 0,
          "we only support baked-in kernel dylib");
   symbol_map = unique_ptr<SymbolMap>(new CompositeSymbolMap(
-      std::move(symbol_map), "get_framebuffer", (void*)0x777)); // TODO: real functions
+      std::move(symbol_map), "get_framebuffer", (void*)get_framebuffer)); // TODO: real functions
   symbol_map = unique_ptr<SymbolMap>(new CompositeSymbolMap(
-      std::move(symbol_map), "yield", (void*)0x777)); // TODO: real functions
+      std::move(symbol_map), "yield", (void*)yield)); // TODO: real functions
   symbol_map = unique_ptr<SymbolMap>(new CompositeSymbolMap(
-      std::move(symbol_map), "exit", (void*)0x777)); // TODO: real functions
+      std::move(symbol_map), "exit", (void*)exit)); // TODO: real functions
   return Status::SUCCESS;
 }
 
