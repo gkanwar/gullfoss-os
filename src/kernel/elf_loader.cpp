@@ -219,6 +219,10 @@ Status ELFLoader::load_process_image(ProcAllocator& alloc) {
   Elf64_Addr min_vaddr = ULLONG_MAX;
   Elf64_Addr max_vaddr = 0;
   auto add_load_segment = [&](auto prog_header) {
+    if (num_load_segments >= max_sections) {
+      debug::serial_printf("Error: cannot load more than %u segments\n", max_sections);
+      return Status::E_MAX_LOAD_SEGMENTS;
+    }
     debug::serial_printf(
         "Adding loadable [%p, %p]\n", prog_header->p_vaddr,
         prog_header->p_vaddr + prog_header->p_memsz);
@@ -228,9 +232,10 @@ Status ELFLoader::load_process_image(ProcAllocator& alloc) {
     }
     if (prog_header->p_vaddr + prog_header->p_memsz > max_vaddr) {
       max_vaddr = prog_header->p_vaddr + prog_header->p_memsz;
-
     }
+    return Status::SUCCESS;
   };
+  // TODO: split dynamic linking out into a real executable
   const char* interp = "/lib/ld64.so.1"; // Generic default
 
   debug::serial_printf("ELF: loading %d program segments\n", elf_header->e_phnum);
@@ -238,16 +243,10 @@ Status ELFLoader::load_process_image(ProcAllocator& alloc) {
     const Elf64_Phdr* prog_header = (const Elf64_Phdr*)
         (((uint8_t*)prog_header_base) + i*elf_header->e_phentsize);
     if (prog_header->p_type == PT_NULL) continue;
-    else if (prog_header->p_type == PT_LOAD) {
-      debug::serial_printf("ELF prog segment %d: PT_LOAD found\n", i);
-      if (num_load_segments >= max_sections) {
-        debug::serial_printf("Error: cannot load more than %u segments\n", max_sections);
-        return Status::E_MAX_LOAD_SEGMENTS;
-      }
-      add_load_segment(prog_header);
-    }
-    else if (prog_header->p_type == PT_DYNAMIC) {
-      debug::serial_printf("Warning: PT_DYNAMIC ignored\n");
+    else if (prog_header->p_type == PT_LOAD || prog_header->p_type == PT_DYNAMIC) {
+      debug::serial_printf("ELF prog segment %d: PT_LOAD/PT_DYNAMIC found\n", i);
+      auto status = add_load_segment(prog_header);
+      if (status != Status::SUCCESS) return status;
     }
     else if (prog_header->p_type == PT_INTERP) {
       debug::serial_printf("ELF prog segment %d: PT_INTERP found\n", i);
@@ -266,7 +265,8 @@ Status ELFLoader::load_process_image(ProcAllocator& alloc) {
         debug::serial_printf("Error: cannot have PT_PHDR after PT_LOAD segments\n");
         return Status::E_BAD_PTPHDR;
       }
-      add_load_segment(prog_header);
+      auto status = add_load_segment(prog_header);
+      if (status != Status::SUCCESS) return status;
     }
     else if (prog_header->p_type == PT_GNU_EH_FRAME ||
              prog_header->p_type == PT_GNU_STACK) {
@@ -323,6 +323,8 @@ Status ELFLoader::load_process_image(ProcAllocator& alloc) {
 }
 
 [[noreturn]] void ELFLoader::exec_process() {
+  // TODO: dynamic linking
+  
   void (*entry)(void) = (void (*)(void))(this->entry + base_addr);
   // TODO: establish user-space stack instead of running on kernel stack
   (*entry)();
