@@ -63,7 +63,9 @@ void handle_gp_fault(int_frame*, uword_t err_code) {
 
 __attribute__((interrupt))
 void handle_page_fault(int_frame*, uword_t err_code) {
-  debug::serial_printf("EXCEPTION: page fault %016llx\n", err_code);
+  void* addr;
+  asm ("mov %%cr2,%0" : "=g"(addr) : );
+  debug::serial_printf("EXCEPTION: page fault at %p (err_code %016llx)\n", addr, err_code);
   PANIC_NOT_IMPLEMENTED("handle_page_fault");
 }
 
