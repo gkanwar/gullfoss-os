@@ -10,6 +10,7 @@ ProcAllocator::ProcAllocator(
     : physMemAlloc(physMemAlloc), virtMemAlloc(virtMemAlloc) {
   assert_make_inst(inst, this);
   void* mem = virtMemAlloc.alloc_free_l2_block();
+  debug::serial_printf("ProcAllocator initialized with mem block at %p\n", mem);
   assert(mem, "not enough mem for ProcAllocator");
   segment_alloc = std::make_unique<LinkedPageAllocator>(mem, LEVEL2_BLOCK_SIZE);
 }

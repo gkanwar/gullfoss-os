@@ -73,7 +73,7 @@ void* LinkedPageAllocator::reserve(lsize_t size) {
       lsize_t leftover = node->size - size;
       if (leftover > 0) {
         node->size -= leftover;
-        void* next_start = node->next->start;
+        void* next_start = node->start + node->size;
         Block* next = new Block(node->next.release(), next_start, leftover, false);
         node->next = std::unique_ptr<Block>(next);
       }

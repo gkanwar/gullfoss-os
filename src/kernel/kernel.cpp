@@ -185,14 +185,28 @@ extern "C" {
   debug::serial_printf("First 4 chars of ELF: %c %c %c %c\n",
                        user_elf.buffer[0], user_elf.buffer[1],
                        user_elf.buffer[2], user_elf.buffer[3]);
-  ELFLoader::Status ret = elf_loader.parse_header();
+  ELFLoader::Status ret;
+  ret = elf_loader.parse_header();
   if (ret != ELFLoader::Status::SUCCESS) {
     debug::serial_printf("Failed to parse ELF header: %d\n", ret);
+    panic("bad!");
   }
   ProcAllocator alloc(PhysMemAllocator::get(), VirtMemAllocator::get());
   ret = elf_loader.load_process_image(alloc);
   if (ret != ELFLoader::Status::SUCCESS) {
     debug::serial_printf("Failed to load ELF: %d\n", ret);
+    panic("bad!");
+  }
+  else {
+    debug::serial_printf("Load process image success!\n");
+  }
+  ret = elf_loader.dynamic_link();
+  if (ret != ELFLoader::Status::SUCCESS) {
+    debug::serial_printf("Failed to dynamic link ELF: %d\n", ret);
+    panic("bad!");
+  }
+  else {
+    debug::serial_printf("Dynamic link success!\n");
   }
   elf_loader.exec_process();
   ASSERT_NOT_REACHED;

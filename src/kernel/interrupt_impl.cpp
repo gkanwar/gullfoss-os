@@ -63,7 +63,7 @@ void handle_gp_fault(int_frame*, uword_t err_code) {
 
 __attribute__((interrupt))
 void handle_page_fault(int_frame*, uword_t err_code) {
-  debug::serial_printf("EXCEPTION: page fault %08x\n", err_code);
+  debug::serial_printf("EXCEPTION: page fault %016llx\n", err_code);
   PANIC_NOT_IMPLEMENTED("handle_page_fault");
 }
 
