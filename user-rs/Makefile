@@ -3,7 +3,7 @@ all: apps guest_os
 
 BIN := bin
 CARGO_TARGET := app_target
-CROSS_TARGET := $(CARGO_TARGET)/x86_64-unknown-none/debug
+CROSS_TARGET := $(CARGO_TARGET)/x86_64-unknown-none/release
 $(shell mkdir -p $(BIN)/apps)
 
 # host-specific variables
@@ -20,7 +20,7 @@ APPS := wallpaper compositor
 APP_OUTS := $(addprefix $(BIN)/apps/,$(APPS))
 define APP_TARGET
 $(CROSS_TARGET)/$(app): $(app)/src/* $(app)/Cargo.toml
-	cd $(app) && cargo build
+	cd $(app) && cargo build --release
 $(BIN)/apps/$(app): $(CROSS_TARGET)/$(app)
 	cp $$^ $$@
 endef
