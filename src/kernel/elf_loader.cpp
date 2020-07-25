@@ -368,7 +368,7 @@ Status ELFLoader::load_process_image(ProcAllocator& alloc) {
   return Status::SUCCESS;
 }
 
-Status ELFLoader::load_dylib(const char* name) {
+Status ELFLoader::load_dylib([[maybe_unused]] const char* name) {
   assert(std::strcmp(name, "libkernel_stubs.so") == 0,
          "we only support baked-in kernel dylib");
   // TODO: better syscall registration system

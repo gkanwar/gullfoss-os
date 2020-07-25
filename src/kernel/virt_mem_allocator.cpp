@@ -185,6 +185,7 @@ void VirtMemAllocator::do_map_page(void* virt_page, void* phys_page, uint8_t ext
     std::memset(pml1_table, 0, sizeof(PageTable));
     add_entry(*pml2_table, PT2_INDEX(addr), (void*)pml1_table, extra_flags);
   }
+  [[maybe_unused]]
   PageTableEntry& pml1_entry = pml1_table->entries[PT1_INDEX(addr)];
   assert(!util::get_bit(pml1_entry.flags, PageTableFlags::Present),
          "attempting to map an already-mapped page");
@@ -227,6 +228,7 @@ void VirtMemAllocator::reserve_entry(
   assert(level == PagingLevel::Page, "unknown paging level");
   // TODO: this lets us reserve already-mapped null page. Not relevant in
   // practice, but dissatisfying.
+  [[maybe_unused]]
   void* page = resolve_entry(*pml1_table, PT1_INDEX(addr));
   assert(!page, "attempting to reserve already-reserved mem");
   set_entry(*pml1_table, PT1_INDEX(addr), (void*)magic_value, extra_flags);
