@@ -50,6 +50,7 @@ endif
 
 
 KERNEL_SRCS = \
+	cxxabi.cpp \
 	debug_serial.cpp \
 	elf_loader.cpp \
 	heap_allocator.cpp \
@@ -64,6 +65,7 @@ KERNEL_SRCS = \
 	proc_allocator.cpp \
 	psffont.cpp \
 	shell.cpp \
+	splash.cpp \
 	syscalls.cpp \
 	tar.cpp \
 	task_manager.cpp \
