@@ -71,6 +71,7 @@ KERNEL_SRCS = \
 	task_manager.cpp \
 	terminal.cpp \
 	test.cpp \
+	virt_file_sys.cpp \
 	virt_mem_allocator.cpp
 SYSTEM_SRCS = \
 	stdlib.cpp \

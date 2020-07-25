@@ -34,6 +34,7 @@
 #include "terminal.h"
 #include "test.h"
 #include "util.h"
+#include "virt_file_sys.h"
 #include "virt_mem_allocator.h"
 
 // PMA, VMA, HA held globally because they exist before the heap exists
@@ -62,7 +63,7 @@ int kernel_early_main(const BOOTBOOT& info, pixel_t* framebuffer) {
 [[noreturn]] void elf_user_task();
 
 [[noreturn]]
-void kernel_main()
+void kernel_main(const BOOTBOOT& info)
 {
   // Interrupts
   new KeyboardState;
@@ -72,6 +73,12 @@ void kernel_main()
   InterruptManager::get().toggle_irq(PICMask1::Keyboard, true);
   pit::set_channel0_divisor(PIT_DIVISOR);
   InterruptManager::get().toggle_irq(PICMask1::PITimer, true);
+
+  // VFS
+  new VirtFileSystem;
+  Tarball initrd((void*)info.initrd_ptr, info.initrd_size);
+  VirtFileSystem::get().mount(
+      "/", unique_ptr<FileSystem>(new InitrdFileSystem(initrd)));
 
   test_kernel_main();
 
@@ -102,7 +109,7 @@ extern "C" {
     // Run global ctors
     _init();
     // Enter usual C++ happy land, where we can use new, etc.
-    kernel_main();
+    kernel_main(_bootboot);
   }
 
   // FIXME: huge hack to just get userspace graphics going
@@ -141,10 +148,12 @@ extern "C" {
   debug::serial_printf("elf_user_task start\n");
   const BOOTBOOT& info = _bootboot;
   debug::serial_printf("BOOTBOOT info %p\n", &info);
-  Tarball initrd((void*)info.initrd_ptr, info.initrd_size);
-  tar_file_t user_elf = initrd.find_file("apps/wallpaper");
-  assert(user_elf.buffer, "User ELF apps/wallpaper not found");
-  ELFLoader elf_loader((const uint8_t*)user_elf.buffer);
+  // Tarball initrd((void*)info.initrd_ptr, info.initrd_size);
+  // tar_file_t user_elf = initrd.find_file("apps/wallpaper");
+  // assert(user_elf.buffer, "User ELF apps/wallpaper not found");
+  unique_ptr<File> user_elf = VirtFileSystem::get().open("/apps/wallpaper");
+  assert(user_elf, "User ELF /apps/wallpaper not found");
+  ELFLoader elf_loader(user_elf->buffer);
   ELFLoader::Status ret;
   ret = elf_loader.parse_header();
   if (ret != ELFLoader::Status::SUCCESS) {

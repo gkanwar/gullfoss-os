@@ -12,16 +12,28 @@ size_t strlen(const char* str)
 }
 
 int strcmp(const char* s1, const char* s2) {
-  for (char c1 = *s1, c2 = *s2; c1 && c2;
-       ++s1, ++s2, c1 = *s1, c2 = *s2) {
+  size_t l1 = strlen(s1);
+  size_t l2 = strlen(s2);
+  if (l1 < l2)
+    return strncmp(s1, s2, l2);
+  else
+    return strncmp(s1, s2, l1);
+}
+
+int strncmp(const char* s1, const char* s2, size_t num) {
+  unsigned i = 0;
+  for (; s1[i] && s2[i]; ++i) {
+    char c1 = s1[i];
+    char c2 = s2[i];
     if (c1 < c2) return -1;
     else if (c1 > c2) return 1;
+    else if (i == num-1) return 0;
   }
   // one of the strings terminated
-  if (*s1 < *s2) {
+  if (s1[i] < s2[i]) {
     return -1;
   }
-  else if (*s1 == *s2) {
+  else if (s1[i] == s2[i]) {
     return 0;
   }
   else {

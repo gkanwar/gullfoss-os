@@ -1,6 +1,8 @@
 #ifndef MEMORY_H
 #define MEMORY_H
 
+#include <stddef.h>
+
 /**
  * Schematically similar to <memory> from libstdc++.
  */
@@ -33,11 +35,13 @@ namespace std {
   class unique_ptr {
   public:
     // empty constructor
-    unique_ptr() : ptr(nullptr) {};
-    // move constructor
-    unique_ptr(unique_ptr&& u) : ptr(nullptr) { this->swap(u); }
+    constexpr unique_ptr() : ptr(nullptr) {};
+    // nullptr constructor
+    constexpr unique_ptr(nullptr_t) : unique_ptr() {}
     // explicit constructor
     explicit unique_ptr(T* ptr) : ptr(ptr) {}
+    // move constructor
+    unique_ptr(unique_ptr&& u) : ptr(nullptr) { this->swap(u); }
     ~unique_ptr() {
       if (ptr) delete ptr;
     }
