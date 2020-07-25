@@ -21,8 +21,6 @@ LinkedBlockAllocator::LinkedBlockAllocator(void* mem, lsize_t memsize) {
   initialize(mem, memsize);
 }
 void LinkedBlockAllocator::initialize(void* mem, lsize_t memsize) {
-  debug::serial_printf("LBA::initialize, head(%p)\n", &head);
-  debug::serial_printf("... = %p\n", head);
   // set up heap blocks
   head = (Block*)mem;
   head->next = nullptr;

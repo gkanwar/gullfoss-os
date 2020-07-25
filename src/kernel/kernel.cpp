@@ -1,8 +1,3 @@
-/**
- * Note: This will be a freestanding C code, i.e. with no access to the C
- * runtime. However, freestanding code has access to header-only defns.
- */
-
 // Check compiler once and for all
 #if defined(__linux__)
 #error "Must use a cross-compiler!"

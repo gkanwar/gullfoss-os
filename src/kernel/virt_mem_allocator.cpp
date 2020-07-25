@@ -165,7 +165,6 @@ PageVirtualStatus VirtMemAllocator::page_map_status(void* page) {
 void VirtMemAllocator::do_map_page(void* virt_page, void* phys_page, uint8_t extra_flags) {
   assert(physMemAlloc,
          "VirtMemAllocator needs to bind a PhysMemAllocator before mapping pages");
-  // debug::serial_printf("do_map_page %p -> %p\n", virt_page, phys_page);
   uint64_t addr = (uint64_t)virt_page;
   PageTable* pml3_table = (PageTable*)resolve_entry(*pml4_table, PT4_INDEX(addr));
   if (!pml3_table || pml3_table == (void*)RESERVE_MAGIC) {
