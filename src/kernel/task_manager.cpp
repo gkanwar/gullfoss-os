@@ -25,14 +25,19 @@ TaskManager& TaskManager::get() { return assert_get_inst(inst); }
 #endif
 
 void TaskManager::yield() {
-  // WARNING: this assumes the calling code saves all relevant registers on the
-  // stack so we can simply swap stacks and return. Interrupts do this for GP
-  // registers, but special registers need to be handled.
+  asm volatile(
+      "push %%rax; push %%rbx; push %%rcx; push %%rdx; push %%rsi; push %%rdi; "
+      "push %%rbp; push %%r8; push %%r9; push %%r10; push %%r11; push %%r12; "
+      "push %%r13; push %%r14; push %%r15" :::); // 15 GP registers
   TaskNode::State& cur_state = cur_task->state;
   const TaskNode::State& next_state = cur_task->next->state;
   cur_task = cur_task->next;
   asm volatile("mov %%rsp,%0":"=m"(cur_state.stack_ptr):);
-  asm volatile("mov %0,%%rsp"::"m"(next_state.stack_ptr));
+  asm volatile("mov %0,%%rsp"::"m"(next_state.stack_ptr):);
+  asm volatile(
+      "pop %%r15; pop %%r14; pop %%r13; pop %%r12; pop %%r11; pop %%r10; "
+      "pop %%r9; pop %%r8; pop %%rbp; pop %%rdi; pop %%rsi; pop %%rdx; "
+      "pop %%rcx; pop %%rbx; pop %%rax" :::); // 15 GP registers
 }
 
 // TODO: Better scheduler locking system
@@ -40,26 +45,21 @@ static void task_entry() {
   asm volatile("sti"::);
 }
 
+struct reg_state_t {
+  u64 gp_regs[15];
+} __attribute__((packed));
+
 void TaskManager::start(void entry(void)) {
-  // Allocate new kernel stack
+  // Allocate new kernel stack = 1 L1 block
   // TODO: Don't map full stack to physical memory
   void* new_stack = VirtMemAllocator::get().alloc_free_l1_block();
-  constexpr auto chunk_pages = PhysMemAllocator::NUM_PAGES_BIG;
   uint8_t stack_map_flags = 0;
   util::set_bit(stack_map_flags, MapFlag::Writeable);
-  for (unsigned i = 0; i < NUM_PT_ENTRIES/chunk_pages; ++i) {
-    void* phys_chunk = PhysMemAllocator::get().allocBig();
-    for (unsigned j = 0; j < chunk_pages; ++j) {
-      void* phys_page = phys_chunk + j*PAGE_SIZE;
-      void* virt_page = new_stack + (chunk_pages*i+j)*PAGE_SIZE;
-      
-      [[maybe_unused]] void* res =
-          VirtMemAllocator::get().map_page(virt_page, phys_page, stack_map_flags);
-      assert(res, "mapping new stack page failed");
-    }
-  }
+  map_block(
+      PhysMemAllocator::get(), VirtMemAllocator::get(),
+      new_stack, LEVEL1_BLOCK_SIZE, stack_map_flags);
   // init stack ptr
-  uint8_t* top_of_stack = (uint8_t*)new_stack + NUM_PT_ENTRIES*PAGE_SIZE;
+  uint8_t* top_of_stack = (uint8_t*)new_stack + LEVEL1_BLOCK_SIZE;
   // push task_entry address and real entry address, so yield returns to generic
   // task entry setup, which in turn returns to the real entry after unlocking
   // scheduling, etc
@@ -67,6 +67,9 @@ void TaskManager::start(void entry(void)) {
   *(void**)top_of_stack = (void*)entry;
   top_of_stack -= sizeof(void*);
   *(void**)top_of_stack = (void*)task_entry;
+  // push initial register state
+  top_of_stack -= sizeof(reg_state_t);
+  *(reg_state_t*)top_of_stack = {0};
 
   {
     ScopedInterruptGuard guard;

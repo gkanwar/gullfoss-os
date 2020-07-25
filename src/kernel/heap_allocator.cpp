@@ -19,13 +19,13 @@ void HeapAllocator::initialize(
 
   uint8_t map_flags = 0;
   util::set_bit(map_flags, MapFlag::Writeable);
-  map_block(physMemAlloc, virtMemAlloc, mem, LEVEL1_PAGES*PAGE_SIZE, map_flags);
+  map_block(physMemAlloc, virtMemAlloc, mem, LEVEL1_BLOCK_SIZE, map_flags);
 
   // parcel out suballocators
   assert(HEAP_PAGES % CHUNK_PAGES == 0, "heap must be a multiple of CHUNK_PAGES");
   constexpr auto n_chunks = HEAP_PAGES / CHUNK_PAGES;
   
-  linked_block_alloc.initialize(mem, (LEVEL1_PAGES-3) * PAGE_SIZE);
+  linked_block_alloc.initialize(mem, (n_chunks-3) * CHUNK_PAGES * PAGE_SIZE);
   slab8 = (Slab8*)(mem + (n_chunks-3) * CHUNK_PAGES * PAGE_SIZE);
   slab16 = (Slab16*)(mem + (n_chunks-2) * CHUNK_PAGES * PAGE_SIZE);
   slab32 = (Slab32*)(mem + (n_chunks-1) * CHUNK_PAGES * PAGE_SIZE);

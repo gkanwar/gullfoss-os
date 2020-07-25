@@ -147,8 +147,6 @@ extern "C" {
   Tarball initrd((void*)info.initrd_ptr, info.initrd_size);
   tar_file_t user_elf = initrd.find_file("apps/wallpaper");
   assert(user_elf.buffer, "User ELF apps/wallpaper not found");
-  // ELFLoader elf_loader(unique_ptr<BlockSource>(new InMemorySource(
-  //     (const uint8_t*)user_elf.buffer, user_elf.size)));
   ELFLoader elf_loader((const uint8_t*)user_elf.buffer);
   ELFLoader::Status ret;
   ret = elf_loader.parse_header();

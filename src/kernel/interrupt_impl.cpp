@@ -79,16 +79,9 @@ __attribute__((interrupt)) void handle_cp_fault(int_frame*) {}
 
 // IRQs from PICs
 __attribute__((interrupt)) void handle_timer(int_frame* frame) {
-  // debug::serial_printf("INTERRUPT: timer\n");
-  // debug::serial_printf("\tRIP = %p\n", (void*)frame->xip);
-  // debug::serial_printf("\tCS = %02llx\n", frame->cs);
-  // debug::serial_printf("\tRFLAGS = %016llx\n", frame->xflags);
-  // debug::serial_printf("\tRSP = %p\n", (void*)frame->xsp);
-  // debug::serial_printf("\tSS = %02llx\n", frame->ss);
   UNUSED_PARAM(frame);
   InterruptManager::pic_send_eoi(0x0); // must send BEFORE yielding
   TaskManager::get().yield();
-  // debug::serial_printf("yield done\n");
 }
 
 __attribute__((interrupt)) void handle_keyboard(int_frame*) {

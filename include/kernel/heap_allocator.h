@@ -12,7 +12,7 @@
 #include "phys_mem_allocator.h"
 #include "virt_mem_allocator.h"
 
-#define HEAP_PAGES NUM_PT_ENTRIES // 2MiB heap
+#define HEAP_PAGES LEVEL1_PAGES // 2MiB heap
 
 class HeapAllocator {
   static constexpr auto CHUNK_PAGES = PhysMemAllocator::NUM_PAGES_BIG;
