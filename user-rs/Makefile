@@ -2,7 +2,7 @@
 all: apps guest_os
 
 BIN := bin
-CARGO_TARGET := app_target
+CARGO_TARGET := build
 CROSS_TARGET := $(CARGO_TARGET)/x86_64-unknown-none/release
 $(shell mkdir -p $(BIN)/apps)
 

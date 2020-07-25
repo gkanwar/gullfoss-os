@@ -1,5 +1,5 @@
 [build]
-target-dir = "app_target"
+target-dir = "build"
 rustflags = ["-C", "link-args=-L../libkernel/native_stubs"]
 
 [profile.dev]
