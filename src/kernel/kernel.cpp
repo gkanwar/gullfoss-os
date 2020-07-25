@@ -60,7 +60,7 @@ int kernel_early_main(const BOOTBOOT& info, pixel_t* framebuffer) {
 
 // Our first real (kernel mode) apps:
 [[noreturn]] void shell_task();
-[[noreturn]] void elf_user_task();
+[[noreturn]] void elf_user_task(void* arg);
 
 [[noreturn]]
 void kernel_main(const BOOTBOOT& info)
@@ -80,12 +80,15 @@ void kernel_main(const BOOTBOOT& info)
   VirtFileSystem::get().mount(
       "/", unique_ptr<FileSystem>(new InitrdFileSystem(initrd)));
 
+  // Process infra
+  new ProcAllocator(PhysMemAllocator::get(), VirtMemAllocator::get());
+
   test_kernel_main();
 
   // Fire Stage 2 booting (for now, just run "shell")
   // TaskManager::get().start(shell_task);
   // FORNOW: attempt to load user-space ELF exe
-  TaskManager::get().start(elf_user_task);
+  TaskManager::get().start(elf_user_task, (void*)"/apps/wallpaper");
 
   // Kernel idle loop (TODO: exit() from this task?)
   while (true) { asm volatile("hlt"::); }
@@ -144,14 +147,15 @@ extern "C" {
   ASSERT_NOT_REACHED;
 }
 
-[[noreturn]] void elf_user_task() {
+[[noreturn]] void elf_user_task(void* arg) {
+  const char* path = (const char*)arg;
   debug::serial_printf("elf_user_task start\n");
   const BOOTBOOT& info = _bootboot;
   debug::serial_printf("BOOTBOOT info %p\n", &info);
   // Tarball initrd((void*)info.initrd_ptr, info.initrd_size);
   // tar_file_t user_elf = initrd.find_file("apps/wallpaper");
   // assert(user_elf.buffer, "User ELF apps/wallpaper not found");
-  unique_ptr<File> user_elf = VirtFileSystem::get().open("/apps/wallpaper");
+  unique_ptr<File> user_elf = VirtFileSystem::get().open(path);
   assert(user_elf, "User ELF /apps/wallpaper not found");
   ELFLoader elf_loader(user_elf->buffer);
   ELFLoader::Status ret;
@@ -160,7 +164,7 @@ extern "C" {
     debug::serial_printf("Failed to parse ELF header: %d\n", ret);
     panic("bad!");
   }
-  ProcAllocator alloc(PhysMemAllocator::get(), VirtMemAllocator::get());
+  ProcAllocator& alloc = ProcAllocator::get();
   ret = elf_loader.load_process_image(alloc);
   if (ret != ELFLoader::Status::SUCCESS) {
     debug::serial_printf("Failed to load ELF: %d\n", ret);

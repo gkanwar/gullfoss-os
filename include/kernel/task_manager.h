@@ -14,7 +14,7 @@ class TaskManager {
   TaskManager();
   static TaskManager& get();
   void yield();
-  void start(void entry(void));
+  void start(void entry(void*), void* arg);
  private:
   TaskNode* cur_task{nullptr};
 };

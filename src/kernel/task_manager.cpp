@@ -40,16 +40,13 @@ void TaskManager::yield() {
       "pop %%rcx; pop %%rbx; pop %%rax" :::); // 15 GP registers
 }
 
-// TODO: Better scheduler locking system
-static void task_entry() {
-  asm volatile("sti"::);
-}
+extern "C" void task_entry();
 
 struct reg_state_t {
   u64 gp_regs[15];
 } __attribute__((packed));
 
-void TaskManager::start(void entry(void)) {
+void TaskManager::start(void entry(void*), void* arg) {
   // Allocate new kernel stack = 1 L1 block
   // TODO: Don't map full stack to physical memory
   void* new_stack = VirtMemAllocator::get().alloc_free_l1_block();
@@ -60,14 +57,16 @@ void TaskManager::start(void entry(void)) {
       new_stack, LEVEL1_BLOCK_SIZE, stack_map_flags);
   // init stack ptr
   uint8_t* top_of_stack = (uint8_t*)new_stack + LEVEL1_BLOCK_SIZE;
-  // push task_entry address and real entry address, so yield returns to generic
-  // task entry setup, which in turn returns to the real entry after unlocking
-  // scheduling, etc
+  // push task_entry address, real entry arg, real entry address, so yield
+  // returns to generic task entry setup, which in turn calls into real entry
+  // after unlocking scheduling and setting up args in regs.
+  top_of_stack -= sizeof(void*);
+  *(void**)top_of_stack = arg;
   top_of_stack -= sizeof(void*);
   *(void**)top_of_stack = (void*)entry;
   top_of_stack -= sizeof(void*);
   *(void**)top_of_stack = (void*)task_entry;
-  // push initial register state
+  // push initial register state, for yield to pop
   top_of_stack -= sizeof(reg_state_t);
   *(reg_state_t*)top_of_stack = {0};
 

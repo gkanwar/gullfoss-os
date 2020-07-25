@@ -69,6 +69,7 @@ KERNEL_SRCS = \
 	syscalls.cpp \
 	tar.cpp \
 	task_manager.cpp \
+	task_manager_entry.s \
 	terminal.cpp \
 	test.cpp \
 	virt_file_sys.cpp \
