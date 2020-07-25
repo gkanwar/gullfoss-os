@@ -323,8 +323,8 @@ Status ELFLoader::load_process_image(ProcAllocator& alloc) {
     }
   }
 
-  Elf64_Addr segment_start = round_down(min_vaddr, PAGE_SIZE);
-  Elf64_Addr segment_end = round_up(max_vaddr, PAGE_SIZE);
+  Elf64_Addr segment_start = util::round_down(min_vaddr, PAGE_SIZE);
+  Elf64_Addr segment_end = util::round_up(max_vaddr, PAGE_SIZE);
   debug::serial_printf("Allocating (relocated) VM segments between (preferred) "
                        "%p and %p\n", (void*)min_vaddr, (void*)max_vaddr);
   void* proc_image = alloc.reserve_proc_segments(segment_end - segment_start);
@@ -349,8 +349,8 @@ Status ELFLoader::load_process_image(ProcAllocator& alloc) {
       util::set_bit(map_flags, MapFlag::UserReadable);
     }
     debug::serial_printf("Mapping segment %p [%llu]\n", base, segment->p_memsz);
-    void* map_base = round_down(base, PAGE_SIZE);
-    lsize_t map_size = round_up(
+    void* map_base = util::round_down(base, PAGE_SIZE);
+    lsize_t map_size = util::round_up(
         segment->p_memsz + (Elf64_Xword)base - (Elf64_Xword)map_base, PAGE_SIZE);
     alloc.map_segment(map_base, map_size, map_flags);
   }

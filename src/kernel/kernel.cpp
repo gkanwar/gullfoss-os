@@ -24,6 +24,7 @@
 #include "keyboard_state.h"
 #include "kernel.h"
 #include "phys_mem_allocator.h"
+#include "prog_int_timer.h"
 #include "psffont.h"
 #include "shell.h"
 #include "splash.h"
@@ -173,6 +174,7 @@ void kernel_main()
 
   // Multitasking
   new TaskManager;
+  pit::set_channel0_divisor(PIT_DIVISOR);
   InterruptManager::get().toggle_irq(PICMask1::PITimer, true);
 
   // Fire Stage 2 booting (for now, just run "shell")
@@ -181,7 +183,10 @@ void kernel_main()
   TaskManager::get().start(elf_user_task);
 
   // Kernel idle loop (maybe we should nuke this task?)
-  while (true) { asm volatile("hlt"::); }
+  while (true) {
+    debug::serial_printf("Kernel idle\n");
+    asm volatile("hlt"::);
+  }
   ASSERT_NOT_REACHED;
 }
 

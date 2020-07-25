@@ -21,6 +21,20 @@ inline void unset_bit(T& flags, U bit) {
   flags &= ~(1 << ubit);
 }
 
+template <typename T, typename U> inline
+T round_up(T addr, U size) {
+  // WARNING: this cast is not portable
+  if ((uint64_t)addr % size != 0) {
+    addr += size - (uint64_t)addr % size;
+  }
+  return addr;
+}
+template <typename T, typename U> inline
+T round_down(T addr, U size) {
+  // WARNING: this cast is not portable
+  return addr - (uint64_t)addr % size;
+}
+
 }
 
 #endif

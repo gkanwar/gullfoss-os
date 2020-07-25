@@ -3,30 +3,19 @@
 
 #include <stdint.h>
 
-#define PROJ_NAME "gullfoss"
+/// Constants
 #define PAGE_MASK (~(0xfff))
 #define PAGE_SIZE 0x1000
 #define PAGE_ADDR_NBITS 12
 // TODO: We're grabbing 4GiB of BOOTBOOT's 16GiB, we could extend
 #define NUM_PHYS_PAGES (1 << 22)
 
-// Just memory locations but we want void pointer semantics so mark as uint8_t
+/// Just memory locations but we want void pointer semantics so mark as uint8_t
 extern uint8_t _kernel_start;
 extern uint8_t _kernel_end;
 
-// Very common utils
-template <typename T, typename U> inline
-T round_up(T addr, U size) {
-  // WARNING: this cast is not portable
-  if ((uint64_t)addr % size != 0) {
-    addr += size - (uint64_t)addr % size;
-  }
-  return addr;
-}
-template <typename T, typename U> inline
-T round_down(T addr, U size) {
-  // WARNING: this cast is not portable
-  return addr - (uint64_t)addr % size;
-}
+/// Configuration
+#define PROJ_NAME "gullfoss"
+#define PIT_DIVISOR (1 << 9) // 1.9 MHz / 2^9 ~= 3.7kHz
 
 #endif

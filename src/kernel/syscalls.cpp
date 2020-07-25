@@ -4,8 +4,8 @@
 extern "C" {
   
   void yield() {
-    // FORNOW: do nothing
-    debug::serial_printf("syscall: yield\n");
+    // FORNOW: just hlt
+    asm volatile("hlt"::);
   }
 
   void exit(u8 code) {
