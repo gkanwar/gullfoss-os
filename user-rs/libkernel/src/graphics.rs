@@ -3,11 +3,13 @@
 use cty::{c_uint};
 
 #[repr(C,packed)]
-#[derive(core::clone::Clone)]
+#[derive(Copy,Clone)]
 pub struct Pixel {
-  pub r: u8,
-  pub g: u8,
+  // TODO: on OSX seems to be BGRA instead, is it the same on Linux?
+  // Need to fix convention for graphics driver.
   pub b: u8,
+  pub g: u8,
+  pub r: u8,
   pub a: u8,
 }
 
