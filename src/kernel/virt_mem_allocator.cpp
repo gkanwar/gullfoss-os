@@ -17,7 +17,7 @@ union PageTableEntry {
   };
   uint64_t addr;
 } __attribute__((packed));
-#  define MAXPHYADDR 52 // Intel notation
+#  define MAXPHYADDR 52
 #  define PHYS_ADDR_MASK 0xffffffffff000
 #  define PT_ENTRY_MASK 0x1ff
 #  define PTE_ADDR(pte) (pte.addr & PHYS_ADDR_MASK)
@@ -48,6 +48,7 @@ struct PageTable {
   PageTableEntry entries[NUM_PT_ENTRIES];
 } __attribute__((packed));
 
+
 // Resolve an entry to a physical address (if the entry is present) or nullptr
 static void* resolve_entry(const PageTable& table, unsigned i) {
   assert(i < NUM_PT_ENTRIES, "entry index too large");
@@ -57,13 +58,14 @@ static void* resolve_entry(const PageTable& table, unsigned i) {
   }
   return nullptr;
 }
-// Add an entry to a physical address, with given extra flags (Present is automatic)
+// Set entry to point to physical address, with given flags
 static void set_entry(PageTable& table, unsigned i, const void* addr, uint8_t flags) {
   assert(i < NUM_PT_ENTRIES, "entry index too large");
   PageTableEntry& entry = table.entries[i];
   entry.addr = (uint64_t)addr;
   entry.flags = flags;
 }
+// Add an entry to a physical address, with given extra flags (Present is automatic)
 static void add_entry(PageTable& table, unsigned i, const void* addr, uint8_t flags) {
   util::set_bit(flags, PageTableFlags::Present);
   set_entry(table, i, addr, flags);
@@ -85,18 +87,6 @@ void VirtMemAllocator::initialize(PhysMemAllocator* physMemAlloc) {
   pml4_table = pml4_ptr;
 }
 
-void* VirtMemAllocator::alloc_free_page() {
-  // FORNOW first pass linear scan allocator
-  // scan from kernel start downwards
-  lsize_t page = ((lsize_t)&_kernel_start) & PAGE_MASK;
-  for (; page != (lsize_t)nullptr; page -= PAGE_SIZE) {
-    if ((bool)page_map_status((void*)page)) {
-      return (void*)page;
-    }
-  }
-  return nullptr;
-}
-
 void* VirtMemAllocator::find_free_block(
     const lsize_t block_size, PageVirtualStatus min_status) {
   // FORNOW first pass linear scan allocator
@@ -114,6 +104,13 @@ void* VirtMemAllocator::find_free_block(
     }
   }
   return nullptr;
+}
+
+void* VirtMemAllocator::alloc_free_page() {
+  void* out = find_free_block(PAGE_SIZE, PageVirtualStatus::PageMissing);
+  if (!out) return out;
+  reserve_entry(out, PagingLevel::Page, RESERVE_MAGIC);
+  return out;
 }
 
 void* VirtMemAllocator::alloc_free_l1_block() {
@@ -258,7 +255,7 @@ void* VirtMemAllocator::map_page(void* virt_page, void* phys_page, uint8_t flags
     util::unset_bit(flags, MapFlag::UserReadable);
     util::set_bit(extra_flags, PageTableFlags::UserSuper); // user-readable
   }
-  assert(flags == 0, "do_map_page did not handle all flags");
+  assert(flags == 0, "map_page did not handle all flags");
 
   do_map_page(virt_page, phys_page, extra_flags);
 
@@ -272,7 +269,7 @@ void map_block(
   assert((uint64_t)mem % PAGE_SIZE == 0, "mem must be page-aligned");
   void* end = mem + size;
 
-  // map blocks in descending size for efficiency
+  // alloc physical blocks in descending size for efficiency
   constexpr lsize_t big_alloc_size = PhysMemAllocator::NUM_PAGES_BIG * PAGE_SIZE;
   for (; mem <= end - big_alloc_size; mem += big_alloc_size) {
     void* phys_mem = physMemAlloc.allocBig();

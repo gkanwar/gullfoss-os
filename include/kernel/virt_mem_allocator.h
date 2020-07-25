@@ -56,10 +56,10 @@ enum class MapFlag {
 
 class VirtMemAllocator {
  public:
-  // Takes ownership of the paging structures handed off from bootloader.
   VirtMemAllocator();
   static VirtMemAllocator& get();
   // NOTE: We need initialize code for kernel_early_main (prior to ctors)
+  // Implicitly takes ownership of the paging structures handed off from bootloader.
   void initialize(PhysMemAllocator*);
   // Map `virt_page` to point to `phys_page`, returning the mapped virt page.
   // Returns `nullptr` on error.

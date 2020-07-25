@@ -64,9 +64,6 @@ int kernel_early_main(const BOOTBOOT& info, pixel_t* framebuffer) {
 [[noreturn]]
 void kernel_main()
 {
-  debug::serial_printf("LEVEL3_BLOCK_SIZE check: %llu\n", (void*)LEVEL3_BLOCK_SIZE);
-  assert(LEVEL3_BLOCK_SIZE, "LEVEL3_BLOCK_SIZE should not overflow!");
-
   // Interrupts
   new KeyboardState;
   new TaskManager;
