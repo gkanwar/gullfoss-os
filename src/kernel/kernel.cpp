@@ -91,7 +91,7 @@ void kernel_main(const BOOTBOOT& info)
   TaskManager::get().start(elf_user_task, (void*)"/apps/compositor");
 
   // Kernel idle loop (TODO: exit() from this task?)
-  while (true) { asm volatile("hlt"::); }
+  while (true) { TaskManager::get().yield(); }
   ASSERT_NOT_REACHED;
 }
 
@@ -184,6 +184,6 @@ extern "C" {
   void (*entry)(void*) = (void(*)(void*))elf_loader.get_entry();
   TaskManager::get().start(entry, nullptr);
   // TODO: exit() call
-  while(true) { asm volatile("hlt"::); }
+  while(true) { TaskManager::get().yield(); }
   ASSERT_NOT_REACHED;
 }
