@@ -10,7 +10,9 @@ let x = 0x1234usize;
 // Good numeric literal
 let y = 0x1234_usize;
 ```
-2. Short names for modules should be used over wildcard imports. E.g.
+2. ~~Short names for modules should be used over wildcard imports.~~
+*EDIT:* I've come around on this one. Concise wildcard imports can be good.
+E.g.
 ```rust
 // Bad wildcard import
 use blah::blah::*; // who knows what we just pulled into our namespace?
