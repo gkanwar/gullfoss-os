@@ -371,12 +371,15 @@ Status ELFLoader::load_process_image(ProcAllocator& alloc) {
 Status ELFLoader::load_dylib(const char* name) {
   assert(std::strcmp(name, "libkernel_stubs.so") == 0,
          "we only support baked-in kernel dylib");
+  // TODO: better syscall registration system
   symbol_map = unique_ptr<SymbolMap>(new CompositeSymbolMap(
-      std::move(symbol_map), "get_framebuffer", (void*)get_framebuffer)); // TODO: real functions
+      std::move(symbol_map), "get_framebuffer", (void*)get_framebuffer));
   symbol_map = unique_ptr<SymbolMap>(new CompositeSymbolMap(
-      std::move(symbol_map), "yield", (void*)yield)); // TODO: real functions
+      std::move(symbol_map), "spawn", (void*)spawn));
   symbol_map = unique_ptr<SymbolMap>(new CompositeSymbolMap(
-      std::move(symbol_map), "exit", (void*)exit)); // TODO: real functions
+      std::move(symbol_map), "yield", (void*)yield));
+  symbol_map = unique_ptr<SymbolMap>(new CompositeSymbolMap(
+      std::move(symbol_map), "exit", (void*)exit));
   return Status::SUCCESS;
 }
 
@@ -475,12 +478,8 @@ Status ELFLoader::dynamic_link() {
   return Status::SUCCESS;
 }
 
-// TODO: establish user-space stack instead of running on kernel stack
-[[noreturn]] void ELFLoader::exec_process() {
-  auto entry = (void (*)(void))(this->entry + base_addr);
-  debug::serial_printf("Calling into %p\n", *entry);
-  (*entry)();
-  ASSERT_NOT_REACHED;
+void* ELFLoader::get_entry() const {
+  return (void*)(entry + base_addr);
 }
 
 

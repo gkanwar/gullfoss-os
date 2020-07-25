@@ -14,7 +14,7 @@ static SHOULD_QUIT: AtomicBool = AtomicBool::new(false);
 pub extern "C" fn _start() -> ! {
   // println!("Hello, compositor!");
 
-  let app_name = "bin/apps/wallpaper";
+  let app_name = "/apps/wallpaper";
   unsafe {
     kernel::spawn(app_name.as_ptr(), app_name.len());
   }

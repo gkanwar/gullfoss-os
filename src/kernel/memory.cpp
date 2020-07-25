@@ -12,18 +12,18 @@ void* operator new[](size_t size) {
 
 void operator delete(void*) {
   // TODO!
-  assert(false, "delete not implemented yet");
+  // panic("delete not implemented yet");
 }
 void operator delete(void*, size_t) {
   // TODO!
-  assert(false, "delete not implemented yet");
+  // panic("delete not implemented yet");
 }
 
 void operator delete[](void*) {
   // TODO!
-  assert(false, "delete not implemented yet");
+  // panic("delete not implemented yet");
 }
 void operator delete[](void*, size_t) {
   // TODO!
-  assert(false, "delete not implemented yet");
+  // panic("delete not implemented yet");
 }

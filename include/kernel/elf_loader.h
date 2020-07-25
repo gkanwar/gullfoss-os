@@ -62,7 +62,7 @@ class ELFLoader {
   // NOTE: limited to PIC only, because of the shared memory space
   Status load_process_image(ProcAllocator&);
   Status dynamic_link();
-  [[noreturn]] void exec_process();
+  void* get_entry() const;
   
  private:
   Status load_dylib(const char*);

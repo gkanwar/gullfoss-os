@@ -6,6 +6,7 @@
 extern "C" {
 
   /// kernel
+  void spawn(const char* path, size_t path_len);
   void yield();
   void exit(u8 code);
 

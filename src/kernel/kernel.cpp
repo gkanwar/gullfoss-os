@@ -88,7 +88,7 @@ void kernel_main(const BOOTBOOT& info)
   // Fire Stage 2 booting (for now, just run "shell")
   // TaskManager::get().start(shell_task);
   // FORNOW: attempt to load user-space ELF exe
-  TaskManager::get().start(elf_user_task, (void*)"/apps/wallpaper");
+  TaskManager::get().start(elf_user_task, (void*)"/apps/compositor");
 
   // Kernel idle loop (TODO: exit() from this task?)
   while (true) { asm volatile("hlt"::); }
@@ -181,6 +181,9 @@ extern "C" {
   else {
     debug::serial_printf("Dynamic link success!\n");
   }
-  elf_loader.exec_process();
+  void (*entry)(void*) = (void(*)(void*))elf_loader.get_entry();
+  TaskManager::get().start(entry, nullptr);
+  // TODO: exit() call
+  while(true) { asm volatile("hlt"::); }
   ASSERT_NOT_REACHED;
 }

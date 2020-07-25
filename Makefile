@@ -122,6 +122,7 @@ INITRD_FILES := \
 INITRD_OUT_FILES := $(addprefix $(TBIN)/initrd/,$(INITRD_FILES))
 
 INITRD_APP_FILES := \
+	apps/compositor \
 	apps/wallpaper
 INITRD_APP_OUT_FILES := $(addprefix $(TBIN)/initrd/,$(INITRD_APP_FILES))
 
