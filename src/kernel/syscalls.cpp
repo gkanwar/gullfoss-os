@@ -1,11 +1,13 @@
 #include "debug_serial.h"
+#include "interrupt_manager.h"
+#include "task_manager.h"
 #include "syscalls.h"
 
 extern "C" {
-  
+
   void yield() {
-    // FORNOW: just hlt
-    asm volatile("hlt"::);
+    ScopedInterruptGuard guard;
+    TaskManager::get().yield();
   }
 
   void exit(u8 code) {
