@@ -85,10 +85,6 @@ void VirtMemAllocator::initialize(PhysMemAllocator* physMemAlloc) {
   pml4_table = pml4_ptr;
 }
 
-void VirtMemAllocator::clear_ident_map() {
-  PANIC_NOT_IMPLEMENTED("clear_ident_map");
-}
-
 void* VirtMemAllocator::alloc_free_page() {
   // FORNOW first pass linear scan allocator
   // scan from kernel start downwards
@@ -244,9 +240,6 @@ void VirtMemAllocator::reserve_entry(
 #endif
 
 void* VirtMemAllocator::map_page(void* virt_page, void* phys_page, uint8_t flags) {
-  if (!virt_page) {
-    virt_page = alloc_free_page();
-  }
   assert((lsize_t)virt_page % PAGE_SIZE == 0, "virt page must be aligned");
   assert((lsize_t)phys_page % PAGE_SIZE == 0, "phys page must be aligned");
 

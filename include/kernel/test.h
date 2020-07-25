@@ -10,7 +10,7 @@ namespace test {
 #define ESC_END "\033[0m"
 
 template<typename Test>
-void pretty_print_test(const char* name, Test t) {
+inline void pretty_print_test(const char* name, Test t) {
   if (t()) {
     debug::serial_printf(ESC_GREEN "[PASS %s]\n" ESC_END, name);
   }
@@ -20,5 +20,8 @@ void pretty_print_test(const char* name, Test t) {
 }
 
 }
+
+void test_kernel_early_main();
+void test_kernel_main();
 
 #endif

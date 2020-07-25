@@ -70,6 +70,7 @@ KERNEL_SRCS = \
 	tar.cpp \
 	task_manager.cpp \
 	terminal.cpp \
+	test.cpp \
 	virt_mem_allocator.cpp
 SYSTEM_SRCS = \
 	stdlib.cpp \

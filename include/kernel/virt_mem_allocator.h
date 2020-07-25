@@ -1,15 +1,15 @@
 #ifndef VIRT_MEM_ALLOCATOR_H
 #define VIRT_MEM_ALLOCATOR_H
 
-#include <stdint.h>
-#include <types.h>
-#include "kernel.h"
-#include "phys_mem_allocator.h"
-
 /**
  * The virtual memory allocator for the kernel assigns pages of virtual memory
  * to pages of physical memory. It owns and maintains the full paging structure.
  */
+
+#include <stdint.h>
+#include <types.h>
+#include "kernel.h"
+#include "phys_mem_allocator.h"
 
 #define PAGING_32 1
 #define PAGING_PAE 2
@@ -61,12 +61,8 @@ class VirtMemAllocator {
   static VirtMemAllocator& get();
   // NOTE: We need initialize code for kernel_early_main (prior to ctors)
   void initialize(PhysMemAllocator*);
-  // Removes identity map leftover from early boot
-  void clear_ident_map();
   // Map `virt_page` to point to `phys_page`, returning the mapped virt page.
-  // If `virt_page` is unavailable, returns `nullptr`. If `virt_page` is
-  // `nullptr`, finds an arbitrary free page above `_kernel_start` and maps
-  // there.
+  // Returns `nullptr` on error.
   void* map_page(void* virt_page, void* phys_page, uint8_t flags);
   // Find and reserve unmapped entry at a given level of the paging structure.
   // NOTE: reservation does not MAP anything, but uses higher page table bits
@@ -75,8 +71,9 @@ class VirtMemAllocator {
   void* alloc_free_l1_block();
   void* alloc_free_l2_block();
   void* alloc_free_l3_block();
-  // Mark a page as "poison" -- not present, and not possible to allocate
+  // Mark a page as "poison", i.e. not present and not possible to allocate.
   void poison_page(void*);
+  
  private:
   void* find_free_block(const lsize_t, PageVirtualStatus);
   void do_map_page(void*, void*, uint8_t);
