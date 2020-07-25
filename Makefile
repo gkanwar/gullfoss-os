@@ -11,7 +11,7 @@ CXX := $(CROSSBIN)/x86_64-elf-g++
 LD := $(CROSSBIN)/x86_64-elf-ld
 
 .SUFFIXES: # remove default rules
-.PHONY: debug release bootboot-image initrd kernel clean kernel-binary
+.PHONY: debug release bootboot-image initrd kernel clean user-apps
 
 
 ### Recursive/trivial make targets
@@ -127,9 +127,11 @@ INITRD_APP_OUT_FILES := $(addprefix $(TBIN)/initrd/,$(INITRD_APP_FILES))
 $(INITRD_OUT_FILES): $(TBIN)/initrd/%: $(SRC)/boot/%
 	mkdir -p `dirname $@`
 	cp $< $@
-$(INITRD_APP_OUT_FILES): $(TBIN)/initrd/%: $(USER)/bin/%
+$(INITRD_APP_OUT_FILES): $(TBIN)/initrd/%: $(USER)/bin/% user-apps
 	mkdir -p `dirname $@`
 	cp $< $@
+user-apps:
+	cd $(USER) && $(MAKE)
 
 # build the kernel binary
 KERNEL_OUT := $(BIN)/$(TARGET)/kernel.bin
