@@ -183,10 +183,7 @@ void kernel_main()
   TaskManager::get().start(elf_user_task);
 
   // Kernel idle loop (maybe we should nuke this task?)
-  while (true) {
-    debug::serial_printf("Kernel idle\n");
-    asm volatile("hlt"::);
-  }
+  while (true) { asm volatile("hlt"::); }
   ASSERT_NOT_REACHED;
 }
 
@@ -203,16 +200,10 @@ extern "C" {
     // TODO: why does this value not come in correctly from BOOTBOOT?
     _bootboot.fb_size = sizeof(pixel_t)*_bootboot.fb_scanline*_bootboot.fb_height;
     // Set up kernel memory management
-    debug::serial_printf("begin kernel_early_main\n");
-    debug::serial_printf("bootboot info fb_size %llu\n", _bootboot.fb_size);
     kernel_early_main(_bootboot, (pixel_t*)&_bootboot_fb);
-    debug::serial_printf("end kernel_early_main\n");
     // Run global ctors
-    debug::serial_printf("start global ctors\n");
     _init();
-    debug::serial_printf("end global ctors\n");
     // Enter usual C++ happy land, where we can use new, etc.
-    debug::serial_printf("start kernel_main\n");
     kernel_main();
   }
 
