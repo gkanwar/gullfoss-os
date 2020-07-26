@@ -25,26 +25,23 @@ TaskManager& TaskManager::get() { return assert_get_inst(inst); }
 #endif
 
 void TaskManager::yield() {
-  // Save RFLAGS and other registers
   asm volatile(
-      "push %%rax; push %%rbx; push %%rcx; push %%rdx; push %%rsi; push %%rdi; "
-      "push %%rbp; push %%r8; push %%r9; push %%r10; push %%r11; push %%r12; "
-      "push %%r13; push %%r14; push %%r15" :::); // 15 GP registers
+      "push %%rbx; push %%rbp; push %%r12; "
+      "push %%r13; push %%r14; push %%r15" :::); // 6 callee-saved registers
   TaskNode::State& cur_state = cur_task->state;
   const TaskNode::State& next_state = cur_task->next->state;
   cur_task = cur_task->next;
   asm volatile("mov %%rsp,%0":"=m"(cur_state.stack_ptr):);
   asm volatile("mov %0,%%rsp"::"m"(next_state.stack_ptr):);
   asm volatile(
-      "pop %%r15; pop %%r14; pop %%r13; pop %%r12; pop %%r11; pop %%r10; "
-      "pop %%r9; pop %%r8; pop %%rbp; pop %%rdi; pop %%rsi; pop %%rdx; "
-      "pop %%rcx; pop %%rbx; pop %%rax" :::); // 15 GP registers
+      "pop %%r15; pop %%r14; pop %%r13; "
+      "pop %%r12; pop %%rbp; pop %%rbx" :::); // 6 callee-saved registers
 }
 
 extern "C" void task_entry();
 
 struct reg_state_t {
-  u64 gp_regs[15];
+  u64 callee_saved_regs[6];
 } __attribute__((packed));
 
 void TaskManager::start(void entry(void*), void* arg) {
@@ -67,7 +64,7 @@ void TaskManager::start(void entry(void*), void* arg) {
   *(void**)top_of_stack = (void*)entry;
   top_of_stack -= sizeof(void*);
   *(void**)top_of_stack = (void*)task_entry;
-  // push initial register state, for yield to pop
+  // push initial callee-saved register state, for yield to pop
   top_of_stack -= sizeof(reg_state_t);
   *(reg_state_t*)top_of_stack = {0};
 
