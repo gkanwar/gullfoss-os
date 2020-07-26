@@ -2,11 +2,9 @@
 #![no_main]
 
 extern crate kernel;
-// extern crate image;
 use kernel::{Signal};
 use kernel::graphics::*;
-use core::{slice};
-// use core::cmp::{min};
+use core::*;
 use core::sync::atomic::{AtomicBool,Ordering};
 // use image::{RgbaImage,Rgba};
 
@@ -100,12 +98,6 @@ fn compute_mandelbrot(width: u32, height: u32, screen: &mut [Pixel]) -> () {
 pub extern "C" fn _start() -> ! {
   // println!("Hello, wallpaper!");
 
-  let mut c = Complex {x: 1.0, y: 3.0};
-  // IPC to compositor
-  unsafe {
-    kernel::send(31337, (&mut c as *mut Complex) as *mut u8);
-  }
-
   let Framebuffer {pixels, width, height} = unsafe { get_framebuffer() };
   // println!("Width = {width}, height = {height}", width=width, height=height);
   // let wallpaper = load_default_wallpaper(width, height);
@@ -124,6 +116,10 @@ pub extern "C" fn _start() -> ! {
     pix.a = 0xff;
   }
   compute_mandelbrot(width, height, screen);
+  // IPC to compositor
+  unsafe {
+    kernel::send(31337, pixels as *mut u8);
+  }
   while !SHOULD_QUIT.load(Ordering::Relaxed) {
     unsafe { kernel::r#yield(); }
     // std::thread::yield_now();

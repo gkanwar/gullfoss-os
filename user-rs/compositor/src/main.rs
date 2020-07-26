@@ -3,6 +3,8 @@
 
 extern crate kernel;
 use kernel::{Signal};
+use kernel::graphics::*;
+use core::*;
 // use kernel::graphics;
 // use kernel::graphics::{Framebuffer};
 // use core::{slice};
@@ -20,9 +22,16 @@ pub extern "C" fn _start() -> ! {
   }
 
   // receive IPC
-  unsafe {
-    let ptr = kernel::accept(31337);
+  let pixels = unsafe { kernel::accept(31337) as *mut Pixel };
+
+  let screen = unsafe { slice::from_raw_parts_mut(pixels, 800*600) };
+  for pix in screen.iter_mut() {
+    pix.r = 0x08;
+    pix.g = 0x08;
+    pix.b = 0x08;
+    pix.a = 0xff;
   }
+  
 
   // let Framebuffer {pixels, width, height} = unsafe { graphics::get_framebuffer() };
   // println!("Width = {width}, height = {height}", width=width, height=height);
