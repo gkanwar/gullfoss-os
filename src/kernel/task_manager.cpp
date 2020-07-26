@@ -25,6 +25,7 @@ TaskManager& TaskManager::get() { return assert_get_inst(inst); }
 #endif
 
 void TaskManager::yield() {
+  // Save RFLAGS and other registers
   asm volatile(
       "push %%rax; push %%rbx; push %%rcx; push %%rdx; push %%rsi; push %%rdi; "
       "push %%rbp; push %%r8; push %%r9; push %%r10; push %%r11; push %%r12; "
