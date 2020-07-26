@@ -100,6 +100,12 @@ fn compute_mandelbrot(width: u32, height: u32, screen: &mut [Pixel]) -> () {
 pub extern "C" fn _start() -> ! {
   // println!("Hello, wallpaper!");
 
+  let mut c = Complex {x: 1.0, y: 3.0};
+  // IPC to compositor
+  unsafe {
+    kernel::send(31337, (&mut c as *mut Complex) as *mut u8);
+  }
+
   let Framebuffer {pixels, width, height} = unsafe { get_framebuffer() };
   // println!("Width = {width}, height = {height}", width=width, height=height);
   // let wallpaper = load_default_wallpaper(width, height);

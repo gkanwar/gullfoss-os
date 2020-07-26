@@ -13,6 +13,16 @@
 #include "task_manager.h"
 #include "util.h"
 
+namespace debug {
+void print_frame(interrupt::int_frame* frame) {
+  serial_printf("INT FRAME RIP: %p\n", (void*)frame->xip);
+  serial_printf("INT FRAME CS: %llx\n", frame->cs);
+  serial_printf("INT FRAME RFLAGS: %llx\n", frame->xflags);
+  serial_printf("INT FRAME RSP: %p\n", frame->xsp);
+  serial_printf("INT FRAME SS: %llx\n", frame->ss);
+}
+}
+
 namespace interrupt {
 
 // panic if called (we expect no interrupts on these vectors)
@@ -23,8 +33,10 @@ void assert_no_handler(int_frame*) {
 // ignore if called (unhandled interrupts for now)
 __attribute__((interrupt)) void id_handler(int_frame*) {}
 
-__attribute__((interrupt)) void handle_div0(int_frame*) {
+__attribute__((interrupt)) void handle_div0(int_frame* frame) {
   debug::serial_printf("EXCEPTION: div 0\n");
+  debug::print_frame(frame);
+  PANIC_NOT_IMPLEMENTED("handle_div0");
 }
 __attribute__((interrupt)) void handle_debug(int_frame*) {}
 __attribute__((interrupt)) void handle_nmi(int_frame*) {}

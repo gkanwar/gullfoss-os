@@ -6,6 +6,8 @@
 extern "C" {
 
   /// kernel
+  void send(u16 port, void* data);
+  void* accept(u16 port);
   void spawn(const char* path, size_t path_len);
   void yield();
   void exit(u8 code);

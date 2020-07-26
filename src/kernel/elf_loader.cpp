@@ -375,6 +375,10 @@ Status ELFLoader::load_dylib([[maybe_unused]] const char* name) {
   symbol_map = unique_ptr<SymbolMap>(new CompositeSymbolMap(
       std::move(symbol_map), "get_framebuffer", (void*)get_framebuffer));
   symbol_map = unique_ptr<SymbolMap>(new CompositeSymbolMap(
+      std::move(symbol_map), "accept", (void*)accept));
+  symbol_map = unique_ptr<SymbolMap>(new CompositeSymbolMap(
+      std::move(symbol_map), "send", (void*)send));
+  symbol_map = unique_ptr<SymbolMap>(new CompositeSymbolMap(
       std::move(symbol_map), "spawn", (void*)spawn));
   symbol_map = unique_ptr<SymbolMap>(new CompositeSymbolMap(
       std::move(symbol_map), "yield", (void*)yield));
@@ -424,9 +428,11 @@ Status ELFLoader::dynamic_link() {
   for (uint i = 0; i < elf_header->e_shnum; ++i) {
     const Elf64_Shdr* sec_header = sec_header_base + i;
     if (sec_header->sh_addr == sym_tab_addr) {
+      assert(sec_header->sh_entsize > 0, "sh_entsize = 0 for .dynsym");
       sym_tab_count = sec_header->sh_size / sec_header->sh_entsize;
     }
     else if (sec_header->sh_addr == rela_plt_addr) {
+      assert(sec_header->sh_entsize > 0, "sh_entsize = 0 for .rela.plt");
       rela_plt_count = sec_header->sh_size / sec_header->sh_entsize;
     }
   }

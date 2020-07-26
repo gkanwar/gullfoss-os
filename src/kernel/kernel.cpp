@@ -16,6 +16,7 @@
 #include "framebuffer.h"
 #include "heap_allocator.h"
 #include "interrupt_manager.h"
+#include "ipc.h"
 #include "keyboard_state.h"
 #include "kernel.h"
 #include "phys_mem_allocator.h"
@@ -77,6 +78,7 @@ void kernel_main(const BOOTBOOT& info)
 
   // Process infra
   new ProcAllocator(PhysMemAllocator::get(), VirtMemAllocator::get());
+  new InterProcessComm;
 
   test_kernel_main();
 

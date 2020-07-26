@@ -19,6 +19,11 @@ pub extern "C" fn _start() -> ! {
     kernel::spawn(app_name.as_ptr(), app_name.len());
   }
 
+  // receive IPC
+  unsafe {
+    let ptr = kernel::accept(31337);
+  }
+
   // let Framebuffer {pixels, width, height} = unsafe { graphics::get_framebuffer() };
   // println!("Width = {width}, height = {height}", width=width, height=height);
   // let screen = unsafe { slice::from_raw_parts_mut(pixels, (width*height) as usize) };

@@ -56,6 +56,7 @@ KERNEL_SRCS = \
 	heap_allocator.cpp \
 	interrupt_impl.cpp \
 	interrupt_manager.cpp \
+	ipc.cpp \
 	kernel.cpp \
 	keyboard_state.cpp \
 	linked_block_allocator.cpp \

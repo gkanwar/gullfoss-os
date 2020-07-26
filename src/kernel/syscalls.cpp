@@ -1,6 +1,7 @@
 #include "debug_serial.h"
 #include "elf_loader.h"
 #include "interrupt_manager.h"
+#include "ipc.h"
 #include "syscalls.h"
 #include "task_manager.h"
 #include "virt_file_sys.h"
@@ -56,6 +57,14 @@ extern "C" {
   void exit(u8 code) {
     // FORNOW: do nothing
     debug::serial_printf("syscall: exit(%d)\n", (int)code);
+  }
+
+  void* accept(u16 port) {
+    return InterProcessComm::get().accept(port);
+  }
+
+  void send(u16 port, void* data) {
+    InterProcessComm::get().send(port, data);
   }
 
 }

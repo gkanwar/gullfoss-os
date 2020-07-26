@@ -28,4 +28,6 @@ extern "C" {
   pub fn spawn(path: *const u8, path_len: size_t) -> ();
   pub fn r#yield() -> ();
   pub fn exit(code: u8) -> !;
+  pub fn send(port: u16, data: *mut u8) -> ();
+  pub fn accept(port: u16) -> *mut u8;
 }
