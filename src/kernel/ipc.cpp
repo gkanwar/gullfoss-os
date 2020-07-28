@@ -8,8 +8,14 @@ InterProcessComm::InterProcessComm() { assert_make_inst(inst, this); }
 InterProcessComm& InterProcessComm::get() { return assert_get_inst(inst); }
 
 void* InterProcessComm::poll(u16 port) {
-  for (auto&& msg : messages) {
-    if (msg.port == port) return msg.data;
+  auto&& last = messages.before_begin();
+  for (auto&& it = messages.begin(); it != messages.end(); ++it) {
+    auto msg = *it;
+    if (msg.port == port) {
+      messages.erase_after(last);
+      return msg.data;
+    }
+    last = it;
   }
   return nullptr;
 }

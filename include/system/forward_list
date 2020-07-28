@@ -10,27 +10,32 @@ namespace std {
 template <typename T>
 class forward_list {
  public:
-  forward_list() : head(nullptr) {}
+  forward_list() : head(new NodeBase{.next = nullptr}) {}
   ~forward_list();
   void push_front(T&& val);
   void pop_front();
   class iter;
+  void erase_after(iter& it);
+  iter before_begin();
   iter begin();
   iter end();
  private:
-  struct Node {
-    Node* next;
-    T value;
+  struct NodeBase {
+    NodeBase* next;
   };
-  Node* head;
+  struct Node : NodeBase {
+    T value;
+    Node(NodeBase* next, T&& value) : NodeBase{next}, value(std::move(value)) {}
+  };
+  NodeBase* head;
 };
 
 template <typename T>
 class forward_list<T>::iter {
  public:
-  iter(Node* cur) : cur(cur) {}
+  iter(NodeBase* cur) : cur(cur) {}
   T& operator*() const {
-    return cur->value;
+    return static_cast<Node*>(cur)->value;
   }
   iter& operator++() {
     cur = cur->next;
@@ -42,32 +47,45 @@ class forward_list<T>::iter {
   friend bool operator!=(const iter& i1, const iter& i2) {
     return !(i1 == i2);
   }
+  friend void forward_list<T>::erase_after(iter&);
  private:
-  Node* cur;
+  NodeBase* cur;
 };
 
 template <typename T>
 forward_list<T>::~forward_list() {
-  for (Node* node = head; node != nullptr; node = node->next) {
+  for (NodeBase* node = head; node != nullptr; node = node->next) {
     delete node;
   }
 }
 
 template <typename T>
+void forward_list<T>::erase_after(iter& it) {
+  Node* after = static_cast<Node*>(it.cur->next);
+  it.cur->next = after->next;
+  delete after;
+}
+
+template <typename T>
 void forward_list<T>::push_front(T&& value) {
-  head = new Node{.next = head, .value = std::move(value)};
+  head->next = (NodeBase*)new Node(head->next, std::move(value));
 }
 
 template <typename T>
 void forward_list<T>::pop_front() {
-  Node* old_head = head;
-  head = head->next;
-  delete old_head;
+  Node* first = static_cast<Node*>(head->next);
+  head->next = head->next->next;
+  delete first;
+}
+
+template <typename T>
+typename forward_list<T>::iter forward_list<T>::before_begin() {
+  return forward_list<T>::iter(head);
 }
 
 template <typename T>
 typename forward_list<T>::iter forward_list<T>::begin() {
-  return forward_list<T>::iter(head);
+  return forward_list<T>::iter(head->next);
 }
 
 template <typename T>
