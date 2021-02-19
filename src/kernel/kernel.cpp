@@ -55,7 +55,7 @@ int kernel_early_main(const BOOTBOOT& info, pixel_t* framebuffer) {
 }
 
 // Our first real (kernel mode) apps:
-[[noreturn]] void shell_task();
+[[noreturn]] void shell_task(void*);
 [[noreturn]] void elf_user_task(void* arg);
 
 [[noreturn]]
@@ -83,7 +83,7 @@ void kernel_main(const BOOTBOOT& info)
   test_kernel_main();
 
   // Fire Stage 2 booting (for now, just run "shell")
-  // TaskManager::get().start(shell_task);
+  // TaskManager::get().start(shell_task, NULL);
   // FORNOW: attempt to load user-space ELF exe
   TaskManager::get().start(elf_user_task, (void*)"/apps/compositor");
 
@@ -124,7 +124,7 @@ extern "C" {
 
 
 // TESTING: some kernel mode tasks
-[[noreturn]] void shell_task() {
+[[noreturn]] void shell_task(void*) {
   debug::serial_printf("shell_task start\n");
   const BOOTBOOT& info = _bootboot;
   pixel_t* framebuffer = (pixel_t*)&_bootboot_fb;
