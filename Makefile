@@ -11,7 +11,7 @@ CXX := $(CROSSBIN)/x86_64-elf-g++
 LD := $(CROSSBIN)/x86_64-elf-ld
 
 .SUFFIXES: # remove default rules
-.PHONY: debug release bootboot-image initrd kernel clean user-apps
+.PHONY: debug release bootboot-image initrd fsroot kernel clean user-apps
 
 
 ### Recursive/trivial make targets
@@ -30,6 +30,7 @@ else
 # make sure output dirs exist
 TBIN := $(BIN)/$(TARGET)
 $(shell mkdir -p $(TBIN)/initrd)
+$(shell mkdir -p $(TBIN)/fsroot)
 $(shell mkdir -p $(TBIN)/kernel)
 $(shell mkdir -p $(TBIN)/system)
 
@@ -122,16 +123,16 @@ INITRD_FILES := \
 	texgyrecursor-regular.psf
 INITRD_OUT_FILES := $(addprefix $(TBIN)/initrd/,$(INITRD_FILES))
 
-INITRD_APP_FILES := \
+FSROOT_APP_FILES := \
 	apps/compositor \
 	apps/wallpaper
-INITRD_APP_OUT_FILES := $(addprefix $(TBIN)/initrd/,$(INITRD_APP_FILES))
+FSROOT_OUT_FILES := $(addprefix $(TBIN)/fsroot/,$(FSROOT_APP_FILES))
 
-# copy initrd files
+# copy files for initrd and fs
 $(INITRD_OUT_FILES): $(TBIN)/initrd/%: $(SRC)/boot/%
 	mkdir -p `dirname $@`
 	cp $< $@
-$(INITRD_APP_OUT_FILES): $(TBIN)/initrd/%: $(USER)/bin/% user-apps
+$(FSROOT_OUT_FILES): $(TBIN)/fsroot/%: $(USER)/bin/% user-apps
 	mkdir -p `dirname $@`
 	cp $< $@
 user-apps:
@@ -143,8 +144,9 @@ $(KERNEL_OUT): $(OBJS) kernel.ld
 	$(CXX) -T kernel.ld -o $@ $(CXXFLAGS) $(LINK_LIST)
 kernel: $(KERNEL_OUT)
 
-initrd: $(KERNEL_OUT) $(INITRD_OUT_FILES) $(INITRD_APP_OUT_FILES)
+initrd: $(KERNEL_OUT) $(INITRD_OUT_FILES)
 	cp $(KERNEL_OUT) $(TBIN)/initrd/
+fsroot: $(FSROOT_OUT_FILES)
 
 # configure bootboot
 $(TBIN)/bootboot.json: $(SRC)/boot/bootboot.template.json
@@ -152,7 +154,7 @@ $(TBIN)/bootboot.json: $(SRC)/boot/bootboot.template.json
 	envsubst <$< >$@
 
 # default target
-bootboot-image: initrd $(TBIN)/bootboot.json
+bootboot-image: initrd fsroot $(TBIN)/bootboot.json
 	mkbootimg $(TBIN)/bootboot.json $(BIN)/$(TARGET)/$(PROJ_NAME).iso
 
 

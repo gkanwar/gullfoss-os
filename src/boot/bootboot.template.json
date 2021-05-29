@@ -3,6 +3,8 @@
   "config": "src/boot/sys/config",
   "initrd": { "type": "tar", "gzip": false, "directory": "bin/${TARGET}/initrd" },
   "partitions": [
-    { "type": "boot", "size": 16 }
+    { "type": "boot", "size": 16 },
+    { "type": "Linux filesystem", "name": "gullfoss root",
+      "directory": "bin/${TARGET}/fsroot", "size": 32, "driver": "ext2" }
   ]
 }
