@@ -44,7 +44,7 @@ struct reg_state_t {
   u64 callee_saved_regs[6];
 } __attribute__((packed));
 
-void TaskManager::start(void entry(void*), void* arg) {
+void TaskManager::spawn(void entry(void*), void* arg) {
   // Allocate new kernel stack = 1 L1 block
   // TODO: Don't map full stack to physical memory
   void* new_stack = VirtMemAllocator::get().alloc_free_l1_block();

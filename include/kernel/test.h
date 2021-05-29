@@ -22,6 +22,6 @@ inline void pretty_print_test(const char* name, Test t) {
 }
 
 void test_kernel_early_main();
-void test_kernel_main();
+void test_kernel_stage1();
 
 #endif

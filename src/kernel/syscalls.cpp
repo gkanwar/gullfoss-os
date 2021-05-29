@@ -44,7 +44,7 @@ extern "C" {
     }
 
     // TODO: init args
-    TaskManager::get().start((void(*)(void*))elf_loader.get_entry(), nullptr);
+    TaskManager::get().spawn((void(*)(void*))elf_loader.get_entry(), nullptr);
 
     delete[] path_cstr;
   }

@@ -38,6 +38,7 @@ PhysMemAllocator physMemAlloc;
 VirtMemAllocator virtMemAlloc;
 HeapAllocator heapAlloc;
 
+/// Kernel early bootup. Does the bare minimum needed to set up memory.
 int kernel_early_main(const BOOTBOOT& info, pixel_t* framebuffer) {
   Tarball initrd((void*)info.initrd_ptr, info.initrd_size);
   show_splash(info, framebuffer, initrd);
@@ -54,13 +55,29 @@ int kernel_early_main(const BOOTBOOT& info, pixel_t* framebuffer) {
   return 0;
 }
 
+void spawn_elf(const char* path);
+
 // Our first real (kernel mode) apps:
 [[noreturn]] void shell_task(void*);
-[[noreturn]] void elf_user_task(void* arg);
+void kernel_init_stage1(const BOOTBOOT& info);
+[[noreturn]] void kernel_init_stage2(void*);
 
+/// Kernel main bootup. Stage 1 boot sets up interrupts and multitasking. Stage
+/// 2 boot is established initially as the only kernel thread.
 [[noreturn]]
 void kernel_main(const BOOTBOOT& info)
 {
+  kernel_init_stage1(info);
+  test_kernel_stage1();
+
+  TaskManager::get().spawn(kernel_init_stage2, nullptr);
+
+  // Kernel idle loop (TODO: exit() from this task?)
+  while (true) { TaskManager::get().yield(); }
+  ASSERT_NOT_REACHED;
+}
+
+void kernel_init_stage1(const BOOTBOOT&) {
   // Interrupts
   new KeyboardState;
   new TaskManager;
@@ -69,25 +86,22 @@ void kernel_main(const BOOTBOOT& info)
   InterruptManager::get().toggle_irq(PICMask1::Keyboard, true);
   pit::set_channel0_divisor(PIT_DIVISOR);
   InterruptManager::get().toggle_irq(PICMask1::PITimer, true);
+}
 
+[[noreturn]]
+void kernel_init_stage2(void*) {
   // VFS
   new VirtFileSystem;
-  Tarball initrd((void*)info.initrd_ptr, info.initrd_size);
-  VirtFileSystem::get().mount(
-      "/", unique_ptr<FileSystem>(new InitrdFileSystem(initrd)));
-
-  // Process infra
+          
+  // Userspace multi-processing
   new ProcAllocator(PhysMemAllocator::get(), VirtMemAllocator::get());
   new InterProcessComm;
 
-  test_kernel_main();
+  // TODO: Fire Stage 3 booting
+  // FORNOW: Just put up our dummy "compositor" userspace process
+  spawn_elf("/apps/compositor");
 
-  // Fire Stage 2 booting (for now, just run "shell")
-  // TaskManager::get().start(shell_task, NULL);
-  // FORNOW: attempt to load user-space ELF exe
-  TaskManager::get().start(elf_user_task, (void*)"/apps/compositor");
-
-  // Kernel idle loop (TODO: exit() from this task?)
+  // TODO: exit() wrappers for threads
   while (true) { TaskManager::get().yield(); }
   ASSERT_NOT_REACHED;
 }
@@ -144,16 +158,12 @@ extern "C" {
   ASSERT_NOT_REACHED;
 }
 
-[[noreturn]] void elf_user_task(void* arg) {
-  const char* path = (const char*)arg;
-  debug::serial_printf("elf_user_task start\n");
-  const BOOTBOOT& info = _bootboot;
-  debug::serial_printf("BOOTBOOT info %p\n", &info);
-  // Tarball initrd((void*)info.initrd_ptr, info.initrd_size);
-  // tar_file_t user_elf = initrd.find_file("apps/wallpaper");
-  // assert(user_elf.buffer, "User ELF apps/wallpaper not found");
+void spawn_elf(const char* path) {
+  debug::serial_printf("spawn_elf start\n");
+  // const BOOTBOOT& info = _bootboot;
+  // debug::serial_printf("BOOTBOOT info %p\n", &info);
   unique_ptr<File> user_elf = VirtFileSystem::get().open(path);
-  assert(user_elf, "User ELF /apps/wallpaper not found");
+  assert(user_elf, "User ELF not found");
   ELFLoader elf_loader(user_elf->buffer);
   ELFLoader::Status ret;
   ret = elf_loader.parse_header();
@@ -179,8 +189,5 @@ extern "C" {
     debug::serial_printf("Dynamic link success!\n");
   }
   void (*entry)(void*) = (void(*)(void*))elf_loader.get_entry();
-  TaskManager::get().start(entry, nullptr);
-  // TODO: exit() call
-  while(true) { TaskManager::get().yield(); }
-  ASSERT_NOT_REACHED;
+  TaskManager::get().spawn(entry, nullptr);
 }

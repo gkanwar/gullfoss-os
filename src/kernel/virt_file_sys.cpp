@@ -18,6 +18,7 @@ static bool is_prefix(const char* pre, const char* str) {
 unique_ptr<File> VirtFileSystem::open(const char* path) {
   for (auto&& mount : mounts) {
     const char* mount_prefix = mount.path;
+    // FIXME: should look for the most specific mount_prefix
     if (is_prefix(mount_prefix, path)) {
       const char* rel_path = &path[strlen(mount_prefix)];
       return mount.fs->open(rel_path);

@@ -6,7 +6,7 @@ void test_kernel_early_main() {
   // TODO
 }
 
-void test_kernel_main() {
+void test_kernel_stage1() {
   test::pretty_print_test("malloc(128)", [&]()->bool {
     uint8_t* mem_chunk = (uint8_t*)HeapAllocator::get().malloc(128);
     if (!mem_chunk) return false;
