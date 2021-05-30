@@ -66,10 +66,10 @@ int kernel_early_main(const BOOTBOOT& info, pixel_t* framebuffer) {
 struct KernelConfig {
   const char* rootfs;
 };
+KernelConfig kernel_config = {0};
 
-KernelConfig parse_kernel_config(const char* ro_env_string) {
+void parse_kernel_config(const char* ro_env_string) {
   // TODO: Handle UTF-8 encoding
-  KernelConfig config = {0};
   char* env_string = new char[strlen(ro_env_string)+1];
   strcpy(env_string, ro_env_string);
   debug::serial_printf("kernel env string:\n%s\n", ro_env_string);
@@ -96,14 +96,13 @@ KernelConfig parse_kernel_config(const char* ro_env_string) {
     if (strcmp(key, "root") == 0) {
       char* buf = new char[strlen(value)+1];
       strcpy(buf, value);
-      config.rootfs = buf;
+      kernel_config.rootfs = buf;
       debug::serial_printf("rootfs set to %s\n", buf);
     }
 
   }
 
   delete[] env_string;
-  return config;
 }
 
 /// Kernel main bootup. Stage 1 boot sets up interrupts and multitasking. Stage
@@ -111,8 +110,7 @@ KernelConfig parse_kernel_config(const char* ro_env_string) {
 [[noreturn]]
 void kernel_main(const BOOTBOOT& info, const char* env_string)
 {
-  [[maybe_unused]]
-  KernelConfig config = parse_kernel_config(env_string);
+  parse_kernel_config(env_string);
   kernel_init_stage1(info);
   test_kernel_stage1();
 
@@ -138,6 +136,7 @@ void kernel_init_stage1(const BOOTBOOT&) {
 void kernel_init_stage2(void*) {
   // VFS
   new VirtFileSystem;
+  // TODO: Use rootfs config to find partition and mount "/"
 
   // Userspace multi-processing
   new ProcAllocator(PhysMemAllocator::get(), VirtMemAllocator::get());
