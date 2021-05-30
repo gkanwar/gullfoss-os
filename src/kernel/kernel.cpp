@@ -33,6 +33,13 @@
 #include "virt_file_sys.h"
 #include "virt_mem_allocator.h"
 
+
+void spawn_elf(const char* path);
+[[noreturn]] void shell_task(void*);
+void kernel_init_stage1(const BOOTBOOT& info);
+[[noreturn]] void kernel_init_stage2(void*);
+
+
 // PMA, VMA, HA held globally because they exist before the heap exists
 PhysMemAllocator physMemAlloc;
 VirtMemAllocator virtMemAlloc;
@@ -51,22 +58,61 @@ int kernel_early_main(const BOOTBOOT& info, pixel_t* framebuffer) {
   heapAlloc.initialize(physMemAlloc, virtMemAlloc);
 
   test_kernel_early_main();
-  
+
   return 0;
 }
 
-void spawn_elf(const char* path);
 
-// Our first real (kernel mode) apps:
-[[noreturn]] void shell_task(void*);
-void kernel_init_stage1(const BOOTBOOT& info);
-[[noreturn]] void kernel_init_stage2(void*);
+struct KernelConfig {
+  const char* rootfs;
+};
+
+KernelConfig parse_kernel_config(const char* ro_env_string) {
+  // TODO: Handle UTF-8 encoding
+  KernelConfig config = {0};
+  char* env_string = new char[strlen(ro_env_string)+1];
+  strcpy(env_string, ro_env_string);
+  debug::serial_printf("kernel env string:\n%s\n", ro_env_string);
+
+  bool tokens_left = true;
+  while (tokens_left) {
+
+    char* line = env_string;
+    char* newline = strchr(env_string, '\n');
+    if (newline != nullptr) {
+      *newline = '\0';
+      env_string = newline+1;
+    }
+    else {
+      tokens_left = false;
+    }
+
+    char* delim = strchr(line, '=');
+    assert(delim != nullptr, "Invalid kernel config environment");
+    *delim = '\0';
+    const char* key = line;
+    const char* value = delim+1;
+    debug::serial_printf("kernel config: %s = %s\n", key, value);
+    if (strcmp(key, "root") == 0) {
+      char* buf = new char[strlen(value)+1];
+      strcpy(buf, value);
+      config.rootfs = buf;
+      debug::serial_printf("rootfs set to %s\n", buf);
+    }
+
+  }
+
+  delete[] env_string;
+  return config;
+}
 
 /// Kernel main bootup. Stage 1 boot sets up interrupts and multitasking. Stage
 /// 2 boot is established initially as the only kernel thread.
 [[noreturn]]
-void kernel_main(const BOOTBOOT& info)
+void kernel_main(const BOOTBOOT& info, const char* env_string)
 {
+  [[maybe_unused]]
+  KernelConfig config = parse_kernel_config(env_string);
   kernel_init_stage1(info);
   test_kernel_stage1();
 
@@ -92,7 +138,7 @@ void kernel_init_stage1(const BOOTBOOT&) {
 void kernel_init_stage2(void*) {
   // VFS
   new VirtFileSystem;
-          
+
   // Userspace multi-processing
   new ProcAllocator(PhysMemAllocator::get(), VirtMemAllocator::get());
   new InterProcessComm;
@@ -123,7 +169,7 @@ extern "C" {
     // Run global ctors
     _init();
     // Enter usual C++ happy land, where we can use new, etc.
-    kernel_main(_bootboot);
+    kernel_main(_bootboot, &_bootboot_environment);
   }
 
   // FIXME: huge hack to just get userspace graphics going

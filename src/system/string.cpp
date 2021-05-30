@@ -11,6 +11,24 @@ size_t strlen(const char* str)
   return len;
 }
 
+const char* strchr(const char* str, int ch) {
+  for (unsigned i = 0; i < strlen(str); ++i) {
+    if (str[i] == ch) {
+      return &(str[i]);
+    }
+  }
+  return nullptr;
+}
+
+char* strchr(char* str, int ch) {
+  return const_cast<char*>(strchr(const_cast<const char*>(str), ch));
+}
+
+char* strcpy(char* dest, const char* src) {
+  memcpy(dest, src, strlen(src)+1);
+  return dest;
+}
+
 int strcmp(const char* s1, const char* s2) {
   size_t l1 = strlen(s1);
   size_t l2 = strlen(s2);
