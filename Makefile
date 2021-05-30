@@ -35,7 +35,7 @@ $(shell mkdir -p $(TBIN)/kernel)
 $(shell mkdir -p $(TBIN)/system)
 
 CFLAGS := -ffreestanding -mcmodel=kernel -mno-red-zone -Wall -Wextra -Werror -Wno-pointer-arith
-CXXFLAGS := -std=c++17 -ffreestanding -fno-rtti -fno-exceptions -mcmodel=kernel -mno-red-zone -Wall -Wextra -Werror -Wno-pointer-arith
+CXXFLAGS := -std=c++2a -ffreestanding -fno-rtti -fno-exceptions -mcmodel=kernel -mno-red-zone -Wall -Wextra -Werror -Wno-pointer-arith
 ASFLAGS := -x assembler-with-cpp
 RELEASE_FLAGS := -DNDEBUG -O3
 DEBUG_FLAGS := -DDEBUG -O2 -g
@@ -63,6 +63,7 @@ KERNEL_SRCS = \
 	linked_block_allocator.cpp \
 	memory.cpp \
 	panic.cpp \
+	pci.cpp \
 	phys_mem_allocator.cpp \
 	proc_allocator.cpp \
 	psffont.cpp \

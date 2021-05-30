@@ -1,0 +1,113 @@
+#ifndef VECTOR_H
+#define VECTOR_H
+
+#include <cstring>
+#include <memory>
+
+namespace std {
+
+  template < class T, class Allocator = std::allocator<T> >
+  class vector {
+   public:
+    typedef T value_type;
+    typedef Allocator allocator_type;
+    typedef typename allocator_type::size_type size_type;
+    typedef value_type& reference;
+    typedef const value_type& const_reference;
+    typedef allocator_traits<Allocator>::pointer pointer;
+    typedef allocator_traits<Allocator>::const_pointer const_pointer;
+    typedef pointer iterator;
+    typedef const_pointer const_iterator;
+    
+    vector() : vector(0, T()) {}
+
+    constexpr vector(
+        size_type count, const T& value, const Allocator& alloc = Allocator()) :
+        alloc(alloc) {
+      buffer = this->alloc.allocate(count);
+      for (unsigned i = 0; i < count; ++i) {
+        buffer[i] = value;
+      }
+      vec_len = buffer_len = count;
+    }
+    
+    constexpr size_type size() const noexcept {
+      return vec_len;
+    }
+    constexpr size_type capacity() const noexcept {
+      return buffer_len;
+    }
+
+    constexpr void reserve(size_type new_cap) {
+      if (buffer_len >= new_cap) return;
+      value_type* new_buffer = alloc.allocate(new_cap);
+      memcpy(new_buffer, buffer, vec_len * sizeof(T));
+      alloc.deallocate(buffer, buffer_len);
+      buffer = new_buffer;
+      buffer_len = new_cap;
+    }
+
+    [[nodiscard]]
+    constexpr bool empty() const noexcept {
+      return size() == 0;
+    }
+
+    constexpr reference at(size_type pos) {
+      // TODO: bounds checking (what do we do with exceptions?)
+      return buffer[pos];
+    }
+    constexpr const_reference at(size_type pos) const {
+      // TODO: bounds checking
+      return buffer[pos];
+    }
+
+    constexpr reference operator[](size_type pos) {
+      return buffer[pos];
+    }
+    constexpr const_reference operator[](size_type pos) const {
+      return buffer[pos];
+    }
+
+    constexpr reference front() {return *begin();}
+    constexpr const_reference front() const {return *begin();}
+    // TODO: back() ?
+
+    constexpr void push_back(T&& value) {
+      if (buffer_len == vec_len) {
+        if (buffer_len >= 4) { // random threshold
+          reserve(buffer_len * 2);
+        }
+        else {
+          reserve(4);
+        }
+      }
+      buffer[vec_len++] = value;
+    }
+    constexpr void push_back(const T& value) {
+      T val_copy(value);
+      push_back(std::move(val_copy));
+    }
+
+    constexpr iterator begin() noexcept {
+      return buffer;
+    }
+    constexpr const_iterator begin() const noexcept {
+      return buffer;
+    }
+    constexpr iterator end() noexcept {
+      return buffer + vec_len;
+    }
+    constexpr const_iterator end() const noexcept {
+      return buffer + vec_len;
+    }
+    
+   private:
+    Allocator alloc;
+    value_type* buffer;
+    size_type buffer_len;
+    size_type vec_len;
+  };
+
+}
+
+#endif

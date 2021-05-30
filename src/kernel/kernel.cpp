@@ -19,6 +19,7 @@
 #include "ipc.h"
 #include "keyboard_state.h"
 #include "kernel.h"
+#include "pci.h"
 #include "phys_mem_allocator.h"
 #include "prog_int_timer.h"
 #include "psffont.h"
@@ -122,6 +123,7 @@ void kernel_main(const BOOTBOOT& info, const char* env_string)
 }
 
 void kernel_init_stage1(const BOOTBOOT&) {
+  debug::serial_printf("[BEGIN kernel_init_stage1]\n");
   // Interrupts
   new KeyboardState;
   new TaskManager;
@@ -130,10 +132,23 @@ void kernel_init_stage1(const BOOTBOOT&) {
   InterruptManager::get().toggle_irq(PICMask1::Keyboard, true);
   pit::set_channel0_divisor(PIT_DIVISOR);
   InterruptManager::get().toggle_irq(PICMask1::PITimer, true);
+  debug::serial_printf("[END kernel_init_stage1]\n");
 }
 
 [[noreturn]]
 void kernel_init_stage2(void*) {
+  debug::serial_printf("[BEGIN kernel_init_stage2]\n");
+
+  // PCI
+  vector<pci::PCIDevice> devices = pci::enumerate_devices();
+  debug::serial_printf("PCI enumeration found %d devices\n", devices.size());
+  for (auto &dev : devices) {
+    const char* vendor_string = pci::get_vendor_string(dev.vendor_id);
+    debug::serial_printf(
+        "... (%04x:%02x.0 vid=%04x[%s] did=%04x)\n",
+        dev.bus, dev.device, dev.vendor_id, vendor_string, dev.device_id);
+  }
+  
   // VFS
   new VirtFileSystem;
   // TODO: Use rootfs config to find partition and mount "/"
@@ -142,6 +157,8 @@ void kernel_init_stage2(void*) {
   new ProcAllocator(PhysMemAllocator::get(), VirtMemAllocator::get());
   new InterProcessComm;
 
+  debug::serial_printf("[END kernel_init_stage2] (handoff to stage 3)\n");
+  
   // TODO: Fire Stage 3 booting
   // FORNOW: Just put up our dummy "compositor" userspace process
   spawn_elf("/apps/compositor");
