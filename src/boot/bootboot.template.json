@@ -1,5 +1,5 @@
 {
-  "iso9660": true,
+  "iso9660": false,
   "config": "src/boot/sys/config",
   "initrd": { "type": "tar", "gzip": false, "directory": "bin/${TARGET}/initrd" },
   "partitions": [

@@ -55,6 +55,7 @@ KERNEL_SRCS = \
 	debug_serial.cpp \
 	elf_loader.cpp \
 	heap_allocator.cpp \
+	ide_controller.cpp \
 	interrupt_impl.cpp \
 	interrupt_manager.cpp \
 	ipc.cpp \
@@ -156,7 +157,7 @@ $(TBIN)/bootboot.json: $(SRC)/boot/bootboot.template.json
 
 # default target
 bootboot-image: initrd fsroot $(TBIN)/bootboot.json
-	mkbootimg $(TBIN)/bootboot.json $(BIN)/$(TARGET)/$(PROJ_NAME).iso
+	mkbootimg $(TBIN)/bootboot.json $(BIN)/$(TARGET)/$(PROJ_NAME).img
 
 
 -include $(KERNEL_DEPS) $(SYSTEM_DEPS)

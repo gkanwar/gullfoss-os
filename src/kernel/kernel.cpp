@@ -15,6 +15,7 @@
 #include "elf_loader.h"
 #include "framebuffer.h"
 #include "heap_allocator.h"
+#include "ide_controller.h"
 #include "interrupt_manager.h"
 #include "ipc.h"
 #include "keyboard_state.h"
@@ -145,8 +146,14 @@ void kernel_init_stage2(void*) {
   for (auto &dev : devices) {
     const char* vendor_string = pci::get_vendor_string(dev.vendor_id);
     debug::serial_printf(
-        "... (%04x:%02x.0 vid=%04x[%s] did=%04x)\n",
-        dev.bus, dev.device, dev.vendor_id, vendor_string, dev.device_id);
+        "... (%04x:%02x.0 vid=%04x[%s] did=%04x class=[%02x:%02x])\n",
+        dev.addr.bus, dev.addr.device, dev.vendor_id, vendor_string, dev.device_id,
+        dev.class_code, dev.subclass_code);
+    // Storage
+    if (dev.class_code == 0x01 && dev.subclass_code == 0x01) {
+      assert(!IDEController::initialized(), "Multiple IDE controllers not supported");
+      new IDEController(dev);
+    }
   }
   
   // VFS
