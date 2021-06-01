@@ -64,6 +64,9 @@ class VirtMemAllocator {
   // Map `virt_page` to point to `phys_page`, returning the mapped virt page.
   // Returns `nullptr` on error.
   void* map_page(void* virt_page, void* phys_page, uint8_t flags);
+  // Unmap `virt_page`, returning the previously mapped physical page.
+  // NOTE: The physical page remains alloc'd in the physical memory allocator.
+  void* unmap_page(void* virt_page);
   // Find and reserve unmapped entry at a given level of the paging structure.
   // NOTE: reservation does not MAP anything, but uses higher page table bits
   // to indicate that the consumer plans to map things there.
@@ -71,6 +74,12 @@ class VirtMemAllocator {
   void* alloc_free_l1_block();
   void* alloc_free_l2_block();
   void* alloc_free_l3_block();
+  // Deallocate virtual memory entry, unmap the associated physical memory, and
+  // release it to the physical memory allocator.
+  void free_page(void* virt_page);
+  void free_l1_block(void* virt_l1_block);
+  void free_l2_block(void* virt_l2_block);
+  void free_l3_block(void* virt_l3_block);
   // Mark a page as "poison", i.e. not present and not possible to allocate.
   void poison_page(void*);
   

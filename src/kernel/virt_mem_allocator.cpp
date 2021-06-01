@@ -134,6 +134,29 @@ void* VirtMemAllocator::alloc_free_l3_block() {
   return out;
 }
 
+void VirtMemAllocator::free_page(void* virt_page) {
+  void* phys_page = unmap_page(virt_page);
+  physMemAlloc->dealloc1(phys_page);
+}
+void VirtMemAllocator::free_l1_block(void* virt_l1_block) {
+  uint64_t addr = (uint64_t) virt_l1_block;
+  for (uint64_t page = addr; page < addr + LEVEL1_BLOCK_SIZE; page += PAGE_SIZE) {
+    free_page((void*)page);
+  }
+}
+void VirtMemAllocator::free_l2_block(void* virt_l2_block) {
+  uint64_t addr = (uint64_t) virt_l2_block;
+  for (uint64_t page = addr; page < addr + LEVEL2_BLOCK_SIZE; page += PAGE_SIZE) {
+    free_page((void*)page);
+  }
+}
+void VirtMemAllocator::free_l3_block(void* virt_l3_block) {
+  uint64_t addr = (uint64_t) virt_l3_block;
+  for (uint64_t page = addr; page < addr + LEVEL3_BLOCK_SIZE; page += PAGE_SIZE) {
+    free_page((void*)page);
+  }
+}
+
 void VirtMemAllocator::poison_page(void* page) {
   assert((uint64_t)page % PAGE_SIZE == 0, "page must be page-aligned");
   reserve_entry(page, PagingLevel::Page, POISON_MAGIC);
@@ -160,6 +183,23 @@ PageVirtualStatus VirtMemAllocator::page_map_status(void* page) {
     return PageVirtualStatus::PageMissing;
   }
   return PageVirtualStatus::Present;
+}
+
+void* VirtMemAllocator::unmap_page(void* virt_page) {
+  // WARNING: Assumes identity mapping, probably should remap a page table
+  // section somewhere into the kernel and write translation code.
+  uint64_t addr = (uint64_t)virt_page;
+  PageTable* pml3_table = (PageTable*)resolve_entry(*pml4_table, PT4_INDEX(addr));
+  assert(pml3_table != nullptr, "Missing PML3 table");
+  PageTable* pml2_table = (PageTable*)resolve_entry(*pml3_table, PT3_INDEX(addr));
+  assert(pml2_table != nullptr, "Missing PML2 table");
+  PageTable* pml1_table = (PageTable*)resolve_entry(*pml2_table, PT2_INDEX(addr));
+  assert(pml1_table != nullptr, "Missing PML1 table");
+  PageTableEntry& entry = pml1_table->entries[PT1_INDEX(addr)];
+  void* phys_addr = (void*)PTE_ADDR(entry);
+  assert(util::get_bit(entry.flags, PageTableFlags::Present), "Page not present");
+  util::unset_bit(entry.flags, PageTableFlags::Present);
+  return phys_addr;
 }
 
 void VirtMemAllocator::do_map_page(void* virt_page, void* phys_page, uint8_t extra_flags) {

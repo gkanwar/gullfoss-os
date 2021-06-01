@@ -2,7 +2,9 @@
 #include "debug_serial.h"
 #include "kernel.h"
 
-[[noreturn]] void panic(const char* msg) {
+[[noreturn]]
+void panic(const char* msg) {
+  asm volatile ("cli"::); // don't field interrupts in the middle of panicking
   debug::serial_printf("\033[31mKernel panic: %s\033[0m\n", msg);
   // TODO: Drop to VGA text mode and display this message?
   // VGATerminal terminal;

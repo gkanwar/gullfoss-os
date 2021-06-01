@@ -16,6 +16,7 @@ class PhysMemAllocator {
   void* alloc1();
   void* allocMed();
   void* allocBig();
+  void dealloc1(void*);
   uint8_t mem_bitmap[NUM_PHYS_PAGES / 8];
   unsigned last_alloc;
 };

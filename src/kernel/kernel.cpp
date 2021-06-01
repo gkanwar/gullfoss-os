@@ -38,6 +38,7 @@
 
 void spawn_elf(const char* path);
 [[noreturn]] void shell_task(void*);
+[[noreturn]] void test_task(void*);
 void kernel_init_stage1(const BOOTBOOT& info);
 [[noreturn]] void kernel_init_stage2(void*);
 
@@ -165,14 +166,16 @@ void kernel_init_stage2(void*) {
   new InterProcessComm;
 
   debug::serial_printf("[END kernel_init_stage2] (handoff to stage 3)\n");
+
+  // TEST: run two tasks simultaneously
+  TaskManager::get().spawn(test_task, nullptr);
+  TaskManager::get().spawn(test_task, nullptr);
   
   // TODO: Fire Stage 3 booting
   // FORNOW: Just put up our dummy "compositor" userspace process
-  spawn_elf("/apps/compositor");
+  // spawn_elf("/apps/compositor");
 
-  // TODO: exit() wrappers for threads
-  while (true) { TaskManager::get().yield(); }
-  ASSERT_NOT_REACHED;
+  TaskManager::get().exit();
 }
 
 
@@ -225,6 +228,14 @@ extern "C" {
   KeyboardState::get().set_subscriber(shell);
   shell.main();
   ASSERT_NOT_REACHED;
+}
+[[noreturn]] void test_task(void*) {
+  for (int i = 0; i < 10; ++i) {
+    debug::serial_printf("test_task %d\n", i);
+    TaskManager::get().yield();
+  }
+  debug::serial_printf("test_task exiting\n");
+  TaskManager::get().exit();
 }
 
 void spawn_elf(const char* path) {

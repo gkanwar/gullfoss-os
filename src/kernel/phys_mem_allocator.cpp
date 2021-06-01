@@ -5,6 +5,7 @@
 #include "assert.h"
 #include "bootboot.h"
 #include "kernel.h"
+#include "util.h"
 
 static PhysMemAllocator* inst;
 
@@ -26,7 +27,7 @@ static void mark_unavail_pages(const MMapEnt* mmap, uint8_t *mem_bitmap) {
        addr < mmap->ptr + MMapEnt_Size(mmap);
        addr += PAGE_SIZE) {
     unsigned i = page_addr_to_bit(addr);
-    mem_bitmap[i/8] |= 1 << (i%8);
+    util::set_bit(mem_bitmap[i/8], i%8);
   }
 }
 
@@ -51,6 +52,13 @@ void PhysMemAllocator::init_mmap(const MMapEnt* mmap, unsigned count) {
   //   .type = MULTIBOOT_MEMORY_RESERVED
   // };
   // mark_unavail_pages(kernel_mmap, mem_bitmap);
+}
+
+void PhysMemAllocator::dealloc1(void* phys_addr) {
+  uint64_t addr = (uint64_t)phys_addr;
+  assert(addr % PAGE_SIZE == 0, "dealloc must be page aligned");
+  unsigned i = page_addr_to_bit(addr);
+  util::unset_bit(mem_bitmap[i/8], i%8);
 }
 
 void* PhysMemAllocator::alloc1() {
