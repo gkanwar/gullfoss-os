@@ -2,6 +2,7 @@
  * Reproduce some C stdlib functionality, as needed.
  */
 
+#include "cmath"
 #include "cstring"
 #include <stdarg.h>
 #include <stdint.h>
@@ -146,6 +147,7 @@ static format_spec parse_format_spec(const char** pfmt) {
     spec.min_width = 1024;
   }
   if (*fmt == '.') {
+    spec.precision = 0;
     ++fmt;
     for (char next = *fmt; next != '\0'; ++fmt, next=*fmt) {
       if (next == '*') { // TODO: support this
@@ -184,11 +186,16 @@ static format_spec parse_format_spec(const char** pfmt) {
     case 'c':
     case 's':
     case 'p':
+    case 'f':
     case '%':
       spec.specifier = *fmt;
       ++fmt;
   }
   *pfmt = fmt;
+  // set spec defaults
+  if (spec.precision < 0) {
+    spec.precision = 6;
+  }
   return spec;
 }
 
@@ -214,6 +221,34 @@ static size_t hex_to_buf(long long unsigned arg, char* buf) {
     len++;
   }
   return len;
+}
+// TODO: really want pair, but don't have it yet
+struct WholeFracSizes {
+  size_t whole_len;
+  size_t frac_len;
+};
+static WholeFracSizes float_to_buf(
+    double arg, char* whole_buf, char* frac_buf, size_t frac_max) {
+  double whole = trunc(arg);
+  double frac = (arg > 0) ? arg - whole : whole - arg;
+  size_t whole_len = 0;
+  size_t frac_len = 0;
+  while (whole >= 1.0) {
+    double whole_shift = whole / 10.0;
+    // FIXME: what if inaccurate FP math?
+    unsigned digit = (unsigned)(10.0*(whole_shift - trunc(whole_shift)));
+    whole_buf[whole_len] = '0' + digit % 10;
+    whole_len++;
+    whole = whole_shift;
+  }
+  while (frac > 0 && frac_len < frac_max) {
+    double frac_shift = frac * 10.0;
+    unsigned digit = trunc(frac_shift);
+    frac_buf[frac_len] = '0' + digit % 10;
+    frac_len++;
+    frac = frac_shift;
+  }
+  return { .whole_len = whole_len, .frac_len = frac_len };
 }
 
 template<typename Writer>
@@ -294,6 +329,35 @@ static void format_hex(Writer putc, const format_spec& spec, uint64_t arg) {
 }
 
 template<typename Writer>
+static void format_float(Writer putc, const format_spec& spec, double arg) {
+  char whole_buf[32];
+  char frac_buf[32];
+  WholeFracSizes len_parts = float_to_buf(arg, whole_buf, frac_buf, sizeof(frac_buf));
+  size_t whole_len = len_parts.whole_len;
+  size_t frac_len = len_parts.frac_len;
+  bool write_decimal = (
+      spec.precision > 0 ||
+      (spec.flags & format_spec::flag::ForcePoint) != 0 );
+  size_t write_len = spec.precision + whole_len;
+  if (write_decimal) write_len++;
+  write_fill(putc, spec, write_len);
+  for (size_t i = whole_len; i > 0; --i) {
+    putc(whole_buf[i-1]);
+  }
+  if (write_decimal) {
+    putc('.');
+  }
+  for (size_t i = 0; i < (size_t)spec.precision; ++i) {
+    if (i >= frac_len) {
+      putc('0');
+    }
+    else {
+      putc(frac_buf[i]);
+    }
+  }
+}
+
+template<typename Writer>
 static void format_string(Writer putc, const format_spec&, const char* str) {
   for (char c = *str; c != '\0'; ++str, c = *str) {
     putc(c);
@@ -349,6 +413,9 @@ static void format_arg(Writer putc, const char** pfmt, va_list& args) {
       #else
       format_hex(putc, spec, (uint32_t)va_arg(args, uint32_t));
       #endif
+      break;
+    case 'f':
+      format_float(putc, spec, va_arg(args, double));
       break;
     case 's':
       format_string(putc, spec, va_arg(args, const char*));

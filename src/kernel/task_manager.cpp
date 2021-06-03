@@ -1,5 +1,6 @@
 #include <cstring>
 #include "assert.h"
+#include "clock.h"
 #include "debug_serial.h"
 #include "interrupt_impl.h"
 #include "interrupt_manager.h"
@@ -92,7 +93,7 @@ void TaskManager::reap_threads() {
   TaskNode* next_task = cur_task->next;
   while (next_task != cur_task) {
     if (next_task->thread_state == ThreadState::ZOMBIE) {
-      debug::serial_printf("reaping thread %p\n", next_task);
+      debug::serial_printf("[%0.2f] reaping thread %p\n", PITClock::get().get_ms(), next_task);
       assert(next_task->next != next_task, "Something went very wrong");
       next_task->next->prev = next_task->prev;
       next_task->prev->next = next_task->next;

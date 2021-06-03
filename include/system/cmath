@@ -1,0 +1,16 @@
+#ifndef CMATH_H
+#define CMATH_H
+
+namespace std {
+
+float floor(float arg);
+double floor(double arg);
+float ceil(float arg);
+double ceil(double arg);
+
+float trunc(float arg);
+double trunc(double arg);
+
+}
+
+#endif

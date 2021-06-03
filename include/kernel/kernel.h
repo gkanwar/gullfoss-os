@@ -17,5 +17,6 @@ extern uint8_t _kernel_end;
 /// Configuration
 #define PROJ_NAME "gullfoss"
 #define PIT_DIVISOR (1 << 9) // 1.9 MHz / 2^9 ~= 3.7kHz
+#define PIT_TICK_MS (PIT_DIVISOR / (1.9*1000.0)) // 2^9 / 1.9MHz ~= 0.27 ms/tick
 
 #endif

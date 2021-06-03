@@ -51,6 +51,7 @@ endif
 
 
 KERNEL_SRCS = \
+	clock.cpp \
 	cxxabi.cpp \
 	debug_serial.cpp \
 	elf_loader.cpp \
@@ -79,6 +80,7 @@ KERNEL_SRCS = \
 	virt_file_sys.cpp \
 	virt_mem_allocator.cpp
 SYSTEM_SRCS = \
+	math.cpp \
 	stdlib.cpp \
 	string.cpp
 

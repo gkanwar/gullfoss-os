@@ -11,6 +11,7 @@
 
 #include "assert.h"
 #include "bootboot.h"
+#include "clock.h"
 #include "debug_serial.h"
 #include "elf_loader.h"
 #include "framebuffer.h"
@@ -134,6 +135,8 @@ void kernel_init_stage1(const BOOTBOOT&) {
   InterruptManager::get().toggle_irq(PICMask1::Keyboard, true);
   pit::set_channel0_divisor(PIT_DIVISOR);
   InterruptManager::get().toggle_irq(PICMask1::PITimer, true);
+  // Clock
+  new PITClock;
   debug::serial_printf("[END kernel_init_stage1]\n");
 }
 
@@ -230,11 +233,12 @@ extern "C" {
   ASSERT_NOT_REACHED;
 }
 [[noreturn]] void test_task(void*) {
+  PITClock& clock = PITClock::get();
   for (int i = 0; i < 10; ++i) {
-    debug::serial_printf("test_task %d\n", i);
+    debug::serial_printf("[%0.2f %d] test_task %d\n", clock.get_ms(), (int)clock.get_ms(), i);
     TaskManager::get().yield();
   }
-  debug::serial_printf("test_task exiting\n");
+  debug::serial_printf("[%0.2f %d] test_task exiting\n", clock.get_ms(), (int)clock.get_ms());
   TaskManager::get().exit();
 }
 

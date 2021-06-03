@@ -5,6 +5,7 @@
  */
 
 #include "assert.h"
+#include "clock.h"
 #include "debug_serial.h"
 #include "interrupt_impl.h"
 #include "interrupt_manager.h"
@@ -92,6 +93,7 @@ __attribute__((interrupt)) void handle_cp_fault(int_frame*) {}
 // IRQs from PICs
 __attribute__((interrupt)) void handle_timer(int_frame* frame) {
   UNUSED_PARAM(frame);
+  PITClock::get().tick();
   InterruptManager::pic_send_eoi(0x0); // must send BEFORE yielding
   TaskManager::get().yield();
 }
