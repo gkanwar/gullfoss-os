@@ -54,6 +54,7 @@ KERNEL_SRCS = \
 	clock.cpp \
 	cxxabi.cpp \
 	debug_serial.cpp \
+	descriptor_tables.cpp \
 	elf_loader.cpp \
 	heap_allocator.cpp \
 	ide_controller.cpp \

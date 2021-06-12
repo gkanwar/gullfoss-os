@@ -13,6 +13,7 @@
 #include "bootboot.h"
 #include "clock.h"
 #include "debug_serial.h"
+#include "descriptor_tables.h"
 #include "elf_loader.h"
 #include "framebuffer.h"
 #include "heap_allocator.h"
@@ -125,8 +126,17 @@ void kernel_main(const BOOTBOOT& info, const char* env_string)
   ASSERT_NOT_REACHED;
 }
 
+/// Take control from previously unspecified (but valid) GDT setup
+void setup_gdt() {
+  void* descriptor_tables_page = physMemAlloc.alloc1();
+  new DescTablesManager;
+  DescTablesManager::get().initialize(descriptor_tables_page);
+}
+
 void kernel_init_stage1(const BOOTBOOT&) {
   debug::serial_printf("[BEGIN kernel_init_stage1]\n");
+  // GDT
+  setup_gdt();
   // Interrupts
   new KeyboardState;
   new TaskManager;
