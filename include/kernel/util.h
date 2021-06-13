@@ -1,6 +1,8 @@
 #ifndef UTIL_H
 #define UTIL_H
 
+#include <types.h>
+
 #define UNUSED_PARAM(x) (sizeof(&x))
 
 namespace util {
@@ -24,15 +26,15 @@ inline void unset_bit(T& flags, U bit) {
 template <typename T, typename U> inline
 T round_up(T addr, U size) {
   // WARNING: this cast is not portable
-  if ((uint64_t)addr % size != 0) {
-    addr += size - (uint64_t)addr % size;
+  if ((u64)addr % size != 0) {
+    addr += size - (u64)addr % size;
   }
   return addr;
 }
 template <typename T, typename U> inline
 T round_down(T addr, U size) {
   // WARNING: this cast is not portable
-  return addr - (uint64_t)addr % size;
+  return addr - (u64)addr % size;
 }
 
 }
