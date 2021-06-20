@@ -71,10 +71,9 @@ static void add_entry(PageTable& table, unsigned i, const void* addr, uint8_t fl
   set_entry(table, i, addr, flags);
 }
 
-// TODO: when exactly do we need to flush?
-// static void flush_tlb() {
-//   asm volatile ("movl %%cr3,%%eax; movl %%eax,%%cr3"::);
-// }
+static void flush_tlb() {
+  asm volatile ("movq %%cr3,%%rax; movq %%rax,%%cr3" ::: "rax", "memory");
+}
 
 static VirtMemAllocator* inst;
 VirtMemAllocator::VirtMemAllocator() { assert_make_inst(inst, this); }
@@ -163,6 +162,16 @@ void VirtMemAllocator::poison_page(void* page) {
 }
 
 #if (PAGING == PAGING_PML4)
+ProcessPageTables VirtMemAllocator::swap_process_page_tables(ProcessPageTables new_pt) {
+  ProcessPageTables old_pt{
+    // NOTE: If no process loaded previously, this will be NULL
+    .pdpt_phys_addr = resolve_entry(*pml4_table, PROC_PML4_INDEX)
+  };
+  add_entry(*pml4_table, PROC_PML4_INDEX, new_pt.pdpt_phys_addr, 0);
+  flush_tlb();
+  return old_pt;
+}
+
 PageVirtualStatus VirtMemAllocator::page_map_status(void* page) {
   // WARNING: Assumes identity mapping, probably should remap a page table
   // section somewhere into the kernel and write translation code.

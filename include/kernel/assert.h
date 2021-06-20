@@ -20,7 +20,7 @@
 // Generic singleton constuctor and fetcher
 template <typename T>
 void assert_make_inst(T* &inst, T* _this) {
-  assert(!inst, "Cannot constructor multiple singleton instances");
+  assert(!inst, "Cannot construct multiple singleton instances");
   inst = _this;
 }
 template <typename T>

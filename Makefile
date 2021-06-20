@@ -69,6 +69,7 @@ KERNEL_SRCS = \
 	pci.cpp \
 	phys_mem_allocator.cpp \
 	proc_allocator.cpp \
+	process.cpp \
 	psffont.cpp \
 	shell.cpp \
 	splash.cpp \

@@ -54,6 +54,16 @@ enum class MapFlag {
   UserReadable = 2,
 };
 
+
+// Processes occupy at most one PML4 entry, with base specified by the following.
+// This assumption allows easy context switching by updating this single entry.
+constexpr unsigned PROC_PML4_INDEX = 42;
+constexpr lsize_t PROC_BASE = PROC_PML4_INDEX*LEVEL3_BLOCK_SIZE;
+
+struct ProcessPageTables {
+  void* pdpt_phys_addr;
+};
+
 class VirtMemAllocator {
  public:
   VirtMemAllocator();
@@ -82,6 +92,12 @@ class VirtMemAllocator {
   void free_l3_block(void* virt_l3_block);
   // Mark a page as "poison", i.e. not present and not possible to allocate.
   void poison_page(void*);
+
+  // Swap process page tables, returning the current page tables info.
+  // Page tables may have been internally rearranged by VMA, so `new_pt` should
+  // be considered consumed, and returned values should be used in place of old
+  // values on context switch.
+  ProcessPageTables swap_process_page_tables(ProcessPageTables new_pt);
   
  private:
   void* find_free_block(const lsize_t, PageVirtualStatus);
